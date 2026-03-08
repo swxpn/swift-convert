@@ -86,7 +86,6 @@ def convert():
     if dpi not in (72, 150, 300):
         return jsonify({"error": "DPI must be 72, 150, or 300."}), 400
 
-    base_name = os.path.splitext(pdf_file.filename)[0]
     session_id = uuid.uuid4().hex
     tmp_dir = tempfile.mkdtemp(prefix=f"pdf2img_{session_id}_")
 
@@ -109,7 +108,7 @@ def convert():
         for idx in pages:
             page = doc[idx]
             pix = page.get_pixmap(matrix=mat, alpha=False)
-            name = f"{base_name}_page_{idx + 1:04d}.{ext}"
+            name = f"page_{idx + 1:04d}.{ext}"
             img_path = os.path.join(tmp_dir, name)
             if fmt == "JPEG":
                 pix.save(img_path, jpg_quality=92)
@@ -119,7 +118,7 @@ def convert():
 
         doc.close()
 
-        zip_name = f"{base_name}_images.zip"
+        zip_name = "converted_images.zip"
         zip_path = os.path.join(tmp_dir, zip_name)
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
             for name in image_names:
@@ -201,9 +200,9 @@ def img_to_pdf():
         if len(doc) == 0:
             return jsonify({"error": "No valid image files found."}), 400
 
-        first_name = next((f.filename for f in files if os.path.splitext(f.filename)[1].lower() in ALLOWED_IMAGE_EXTENSIONS), "converted")
-        pdf_base = os.path.splitext(first_name)[0]
-        pdf_name = f"{pdf_base}.pdf"
+        first_name = next((f.filename for f in files if os.path.splitext(f.filename)[1].lower() in ALLOWED_IMAGE_EXTENSIONS), "images")
+        base = os.path.splitext(os.path.basename(first_name))[0]
+        pdf_name = f"converted-{base}.pdf"
         pdf_path = os.path.join(tmp_dir, pdf_name)
         doc.save(pdf_path)
         doc.close()
