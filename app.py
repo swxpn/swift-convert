@@ -7,6 +7,7 @@ import threading
 import time
 
 import fitz  # PyMuPDF
+from PIL import Image
 from flask import Flask, request, jsonify, send_file, render_template_string
 
 app = Flask(__name__)
@@ -145,17 +146,94 @@ def convert():
         return jsonify({"error": f"Conversion failed: {e}"}), 500
 
 
+ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".gif", ".webp"}
+
+
+@app.route("/img2pdf", methods=["POST"])
+def img_to_pdf():
+    files = request.files.getlist("images")
+    page_size = request.form.get("page_size", "A4").upper()
+    orientation = request.form.get("orientation", "portrait").lower()
+
+    if not files or all(f.filename == "" for f in files):
+        return jsonify({"error": "No image files provided."}), 400
+
+    sizes = {
+        "A4": (595.28, 841.89),
+        "LETTER": (612, 792),
+        "A3": (841.89, 1190.55),
+    }
+    if page_size not in sizes:
+        return jsonify({"error": "Page size must be A4, Letter, or A3."}), 400
+    if orientation not in ("portrait", "landscape"):
+        return jsonify({"error": "Orientation must be portrait or landscape."}), 400
+
+    w, h = sizes[page_size]
+    if orientation == "landscape":
+        w, h = h, w
+
+    session_id = uuid.uuid4().hex
+    tmp_dir = tempfile.mkdtemp(prefix=f"img2pdf_{session_id}_")
+
+    try:
+        doc = fitz.open()
+        for f in files:
+            ext = os.path.splitext(f.filename)[1].lower()
+            if ext not in ALLOWED_IMAGE_EXTENSIONS:
+                continue
+            img_path = os.path.join(tmp_dir, uuid.uuid4().hex + ext)
+            f.save(img_path)
+
+            img = Image.open(img_path)
+            img_w, img_h = img.size
+            img.close()
+
+            page = doc.new_page(width=w, height=h)
+            iw, ih = float(img_w), float(img_h)
+            scale = min(w / iw, h / ih)
+            rw, rh = iw * scale, ih * scale
+            x0 = (w - rw) / 2
+            y0 = (h - rh) / 2
+            rect = fitz.Rect(x0, y0, x0 + rw, y0 + rh)
+            page.insert_image(rect, filename=img_path)
+
+        if len(doc) == 0:
+            return jsonify({"error": "No valid image files found."}), 400
+
+        pdf_name = "converted.pdf"
+        pdf_path = os.path.join(tmp_dir, pdf_name)
+        doc.save(pdf_path)
+        doc.close()
+
+        SESSIONS[session_id] = {
+            "dir": tmp_dir,
+            "pdf": pdf_name,
+            "created": time.time(),
+        }
+
+        return jsonify({
+            "session": session_id,
+            "pages": len(files),
+            "pdf": f"/file/{session_id}/{pdf_name}",
+        })
+
+    except Exception as e:
+        import shutil; shutil.rmtree(tmp_dir, ignore_errors=True)
+        return jsonify({"error": f"Conversion failed: {e}"}), 500
+
+
 @app.route("/file/<session_id>/<filename>")
 def serve_file(session_id, filename):
     meta = SESSIONS.get(session_id)
     if not meta:
         return "Session not found or expired.", 404
-    path = os.path.join(meta["dir"], filename)
+    safe_name = os.path.basename(filename)
+    path = os.path.join(meta["dir"], safe_name)
     if not os.path.isfile(path):
         return "File not found.", 404
-    as_attachment = filename.endswith(".zip")
+    as_attachment = safe_name.endswith(".zip") or safe_name.endswith(".pdf")
     return send_file(path, as_attachment=as_attachment,
-                     download_name=filename if as_attachment else None)
+                     download_name=safe_name if as_attachment else None)
 
 
 # ── HTML template ──────────────────────────────────────────────────────────────
@@ -165,15 +243,25 @@ HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDF to Image Converter</title>
+<title>PDF &amp; Image Converter</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: system-ui, sans-serif; background: #f4f6f9; color: #1a1a2e; min-height: 100vh; }
   header { background: #2b2d42; color: #fff; padding: 1.2rem 2rem; }
   header h1 { font-size: 1.4rem; font-weight: 600; }
   header p { font-size: 0.85rem; opacity: 0.7; margin-top: 0.25rem; }
-  main { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; display: grid; grid-template-columns: 320px 1fr; gap: 1.5rem; }
-  .panel { background: #fff; border-radius: 10px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+  .tabs { display: flex; gap: 0; max-width: 1100px; margin: 1.5rem auto 0; padding: 0 1rem; }
+  .tab-btn {
+    padding: .6rem 1.4rem; background: #e0e3ea; border: none; cursor: pointer;
+    font-size: 0.9rem; font-weight: 600; color: #555; border-radius: 8px 8px 0 0;
+    transition: all .15s;
+  }
+  .tab-btn.active { background: #fff; color: #2b2d42; }
+  .tab-content { display: none; }
+  .tab-content.active { display: grid; }
+  main { max-width: 1100px; margin: 0 auto; padding: 0 1rem 2rem; display: grid; grid-template-columns: 320px 1fr; gap: 1.5rem; }
+  .panel { background: #fff; border-radius: 0 10px 10px 10px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+  .panel.right { border-radius: 0 0 10px 10px; }
   .panel h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1.2rem; }
   label { display: block; font-size: 0.82rem; font-weight: 500; margin-bottom: 0.3rem; color: #444; }
   .field { margin-bottom: 1rem; }
@@ -205,9 +293,9 @@ HTML = """<!DOCTYPE html>
   }
   .btn:hover { background: #3a3d56; }
   .btn:disabled { background: #aaa; cursor: not-allowed; }
-  #status { font-size: 0.85rem; margin-top: .8rem; min-height: 1.2rem; color: #555; }
-  #status.error { color: #c0392b; }
-  #status.ok { color: #27ae60; }
+  .status { font-size: 0.85rem; margin-top: .8rem; min-height: 1.2rem; color: #555; }
+  .status.error { color: #c0392b; }
+  .status.ok { color: #27ae60; }
   .download-btn {
     display: none; width: 100%; padding: .55rem; background: #27ae60; color: #fff;
     border: none; border-radius: 6px; font-size: 0.88rem; font-weight: 600;
@@ -223,14 +311,24 @@ HTML = """<!DOCTYPE html>
   #lightbox.open { display:flex; }
   #lightbox img { max-width:90vw; max-height:90vh; border-radius:8px; }
   #lightbox-close { position:fixed; top:1rem; right:1.2rem; color:#fff; font-size:2rem; cursor:pointer; line-height:1; }
+  .file-list { list-style: none; margin-top: .5rem; }
+  .file-list li { font-size: 0.82rem; color: #2b2d42; padding: .15rem 0; display:flex; align-items:center; gap:.4rem; }
+  .file-list li .remove { color:#c0392b; cursor:pointer; font-weight:700; }
 </style>
 </head>
 <body>
 <header>
-  <h1>PDF to Image Converter</h1>
-  <p>Convert any PDF page to high-quality PNG or JPEG images</p>
+  <h1>PDF &amp; Image Converter</h1>
+  <p>Convert PDF to images or images to PDF</p>
 </header>
-<main>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('pdf2img')">PDF &rarr; Image</button>
+  <button class="tab-btn" onclick="switchTab('img2pdf')">Image &rarr; PDF</button>
+</div>
+
+<!-- ─── PDF to Image ─────────────────────────────── -->
+<main id="tab-pdf2img" class="tab-content active">
   <div class="panel">
     <h2>Settings</h2>
 
@@ -267,14 +365,59 @@ HTML = """<!DOCTYPE html>
       <input type="text" id="pages" value="all" placeholder='all, 1-3, 1,4,6, 2-5,8'>
     </div>
 
-    <button class="btn" id="convertBtn" onclick="convert()">Convert</button>
-    <div id="status"></div>
+    <button class="btn" id="convertBtn" onclick="convertPdf2Img()">Convert</button>
+    <div id="status" class="status"></div>
     <a id="downloadBtn" class="download-btn" download>Download all as ZIP</a>
   </div>
 
-  <div class="panel">
+  <div class="panel right">
     <h2>Preview</h2>
     <div id="gallery" class="empty">Converted images will appear here.</div>
+  </div>
+</main>
+
+<!-- ─── Image to PDF ─────────────────────────────── -->
+<main id="tab-img2pdf" class="tab-content">
+  <div class="panel">
+    <h2>Settings</h2>
+
+    <div class="field">
+      <div class="drop-zone" id="imgDropZone">
+        <input type="file" id="imgInput" accept="image/*" multiple>
+        <svg width="36" height="36" fill="none" stroke="#bbb" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><rect x="3" y="16" width="18" height="5" rx="1.5"/></svg>
+        <p>Click or drag images here (multiple allowed)</p>
+        <div class="filename" id="imgFileNames"></div>
+      </div>
+      <ul class="file-list" id="imgFileList"></ul>
+    </div>
+
+    <div class="field">
+      <label for="pageSize">Page Size</label>
+      <select id="pageSize">
+        <option value="A4" selected>A4</option>
+        <option value="Letter">Letter</option>
+        <option value="A3">A3</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Orientation</label>
+      <div class="radio-group">
+        <input type="radio" name="orient" id="orientPortrait" value="portrait" checked>
+        <label for="orientPortrait">Portrait</label>
+        <input type="radio" name="orient" id="orientLandscape" value="landscape">
+        <label for="orientLandscape">Landscape</label>
+      </div>
+    </div>
+
+    <button class="btn" id="img2pdfBtn" onclick="convertImg2Pdf()">Convert to PDF</button>
+    <div id="img2pdfStatus" class="status"></div>
+    <a id="img2pdfDownload" class="download-btn" download>Download PDF</a>
+  </div>
+
+  <div class="panel right">
+    <h2>Preview</h2>
+    <div id="imgPreview" class="empty">Selected images will appear here.</div>
   </div>
 </main>
 
@@ -284,6 +427,15 @@ HTML = """<!DOCTYPE html>
 </div>
 
 <script>
+/* ─── Tab switching ─── */
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+}
+
+/* ─── PDF → Image ─── */
 const dropZone = document.getElementById("dropZone");
 const pdfInput = document.getElementById("pdfInput");
 const fileName = document.getElementById("fileName");
@@ -304,9 +456,9 @@ dropZone.addEventListener("drop", e => {
   }
 });
 
-async function convert() {
+async function convertPdf2Img() {
   const file = pdfInput.files[0];
-  if (!file) { setStatus("Please select a PDF file.", "error"); return; }
+  if (!file) { setStatus("status", "Please select a PDF file.", "error"); return; }
 
   const fmt   = document.querySelector('input[name=fmt]:checked').value;
   const dpi   = document.getElementById("dpi").value;
@@ -315,7 +467,7 @@ async function convert() {
 
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Converting…';
-  setStatus("Uploading and converting…", "");
+  setStatus("status", "Uploading and converting…", "");
 
   const form = new FormData();
   form.append("pdf", file);
@@ -326,14 +478,14 @@ async function convert() {
   try {
     const res  = await fetch("/convert", { method: "POST", body: form });
     const data = await res.json();
-    if (!res.ok) { setStatus(data.error || "Conversion failed.", "error"); return; }
+    if (!res.ok) { setStatus("status", data.error || "Conversion failed.", "error"); return; }
 
-    setStatus(`Converted ${data.count} page(s) to ${fmt} at ${dpi} DPI.`, "ok");
+    setStatus("status", `Converted ${data.count} page(s) to ${fmt} at ${dpi} DPI.`, "ok");
     renderGallery(data.images);
     const dl = document.getElementById("downloadBtn");
     dl.href = data.zip; dl.style.display = "block";
   } catch (e) {
-    setStatus("Network error: " + e.message, "error");
+    setStatus("status", "Network error: " + e.message, "error");
   } finally {
     btn.disabled = false;
     btn.textContent = "Convert";
@@ -349,9 +501,93 @@ function renderGallery(images) {
   ).join("");
 }
 
-function setStatus(msg, cls) {
-  const el = document.getElementById("status");
-  el.textContent = msg; el.className = cls;
+/* ─── Image → PDF ─── */
+const imgDropZone = document.getElementById("imgDropZone");
+const imgInput    = document.getElementById("imgInput");
+let imgFiles      = [];  // maintain ordered file list
+
+imgDropZone.addEventListener("click", () => imgInput.click());
+imgInput.addEventListener("change", () => addImages(imgInput.files));
+imgDropZone.addEventListener("dragover", e => { e.preventDefault(); imgDropZone.classList.add("dragover"); });
+imgDropZone.addEventListener("dragleave", () => imgDropZone.classList.remove("dragover"));
+imgDropZone.addEventListener("drop", e => {
+  e.preventDefault(); imgDropZone.classList.remove("dragover");
+  addImages(e.dataTransfer.files);
+});
+
+function addImages(fileList) {
+  for (const f of fileList) {
+    if (f.type.startsWith("image/")) imgFiles.push(f);
+  }
+  renderImgList();
+  renderImgPreview();
+}
+
+function removeImage(i) {
+  imgFiles.splice(i, 1);
+  renderImgList();
+  renderImgPreview();
+}
+
+function renderImgList() {
+  const ul = document.getElementById("imgFileList");
+  ul.innerHTML = imgFiles.map((f, i) =>
+    `<li><span class="remove" onclick="removeImage(${i})">&times;</span> ${f.name}</li>`
+  ).join("");
+  document.getElementById("imgFileNames").textContent =
+    imgFiles.length ? imgFiles.length + " image(s) selected" : "";
+}
+
+function renderImgPreview() {
+  const g = document.getElementById("imgPreview");
+  if (!imgFiles.length) { g.className = "empty"; g.innerHTML = "Selected images will appear here."; return; }
+  g.className = "gallery";
+  g.innerHTML = "";
+  imgFiles.forEach(f => {
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(f);
+    img.loading = "lazy";
+    img.onclick = () => openLightbox(img.src);
+    g.appendChild(img);
+  });
+}
+
+async function convertImg2Pdf() {
+  if (!imgFiles.length) { setStatus("img2pdfStatus", "Please add at least one image.", "error"); return; }
+
+  const pageSize    = document.getElementById("pageSize").value;
+  const orientation = document.querySelector('input[name=orient]:checked').value;
+  const btn         = document.getElementById("img2pdfBtn");
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Converting…';
+  setStatus("img2pdfStatus", "Uploading and converting…", "");
+
+  const form = new FormData();
+  imgFiles.forEach(f => form.append("images", f));
+  form.append("page_size", pageSize);
+  form.append("orientation", orientation);
+
+  try {
+    const res  = await fetch("/img2pdf", { method: "POST", body: form });
+    const data = await res.json();
+    if (!res.ok) { setStatus("img2pdfStatus", data.error || "Conversion failed.", "error"); return; }
+
+    setStatus("img2pdfStatus", `Created PDF with ${data.pages} page(s).`, "ok");
+    const dl = document.getElementById("img2pdfDownload");
+    dl.href = data.pdf; dl.style.display = "block";
+  } catch (e) {
+    setStatus("img2pdfStatus", "Network error: " + e.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Convert to PDF";
+  }
+}
+
+/* ─── Shared helpers ─── */
+function setStatus(id, msg, cls) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.className = "status " + cls;
 }
 
 function openLightbox(src) {
