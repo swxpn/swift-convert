@@ -5,12 +5,31 @@ import zipfile
 import tempfile
 import threading
 import time
+from datetime import datetime, timezone
 
 import fitz  # PyMuPDF
 from PIL import Image
 from flask import Flask, request, jsonify, send_file, render_template_string
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure
 
 app = Flask(__name__)
+
+# ── MongoDB Atlas ─────────────────────────────────────────────────────────────
+MONGO_URI = os.environ.get("MONGO_URI") or os.environ.get("MONGODB_URI", "")
+db = None
+
+if MONGO_URI:
+    try:
+        mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+        mongo_client.admin.command("ping")
+        db = mongo_client.get_default_database("pdf_img_converter")
+        print("Connected to MongoDB Atlas successfully.")
+    except ConnectionFailure as e:
+        print(f"MongoDB connection failed: {e}")
+        db = None
+else:
+    print("MONGODB_URI not set – running without database.")
 
 # Temp session store: session_id -> {"dir": path, "images": [...], "zip": path}
 SESSIONS: dict = {}
@@ -131,6 +150,17 @@ def convert():
             "created": time.time(),
         }
 
+        if db is not None:
+            db.conversions.insert_one({
+                "type": "pdf_to_image",
+                "session_id": session_id,
+                "format": fmt,
+                "dpi": dpi,
+                "pages_converted": len(pages),
+                "total_pages": total,
+                "created_at": datetime.now(timezone.utc),
+            })
+
         return jsonify({
             "session": session_id,
             "count": len(pages),
@@ -212,6 +242,16 @@ def img_to_pdf():
             "pdf": pdf_name,
             "created": time.time(),
         }
+
+        if db is not None:
+            db.conversions.insert_one({
+                "type": "image_to_pdf",
+                "session_id": session_id,
+                "page_size": page_size,
+                "orientation": orientation,
+                "image_count": len(files),
+                "created_at": datetime.now(timezone.utc),
+            })
 
         return jsonify({
             "session": session_id,
