@@ -1800,7 +1800,7 @@ HTML = """<!DOCTYPE html>
     <div class="topbar">
       <div class="brand">
         <button type="button" id="themeToggle" class="brand-badge" aria-label="Toggle theme" title="Toggle theme"><span id="themeIcon">☀</span></button>
-        <span>Swift Converter</span>
+        <span>Swift Convert</span>
       </div>
       <div class="topbar-actions">
         <div class="top-note">Fast, clean, and one-click file delivery</div>
@@ -1865,7 +1865,9 @@ HTML = """<!DOCTYPE html>
 
     <div class="field">
       <label for="pages">Page Range</label>
-      <input type="text" id="pages" value="all" placeholder='All, 1-3, 1,4,6, 2-5,8'>
+      <select id="pages">
+        <option value="all">All pages</option>
+      </select>
     </div>
 
     <button class="btn" id="convertBtn" onclick="convertPdf2Img()">Convert</button>
@@ -2076,10 +2078,59 @@ themeToggle.addEventListener("click", () => {
 const dropZone = document.getElementById("dropZone");
 const pdfInput = document.getElementById("pdfInput");
 const fileName = document.getElementById("fileName");
+const pagesSelect = document.getElementById("pages");
+
+function buildPagesDropdown(numPages) {
+  pagesSelect.innerHTML = '<option value="all">All pages</option>';
+  if (!numPages || numPages < 1) return;
+  if (numPages > 1) {
+    const grpPages = document.createElement("optgroup");
+    grpPages.label = "Single page";
+    for (let p = 1; p <= numPages; p++) {
+      const opt = document.createElement("option");
+      opt.value = String(p);
+      opt.textContent = `Page ${p}`;
+      grpPages.appendChild(opt);
+    }
+    pagesSelect.appendChild(grpPages);
+  } else {
+    const opt = document.createElement("option");
+    opt.value = "1";
+    opt.textContent = "Page 1";
+    pagesSelect.appendChild(opt);
+  }
+  if (numPages > 5) {
+    const grpRanges = document.createElement("optgroup");
+    grpRanges.label = "Page range";
+    const step = numPages <= 20 ? 5 : numPages <= 50 ? 10 : 20;
+    for (let s = 1; s <= numPages; s += step) {
+      const e = Math.min(s + step - 1, numPages);
+      if (s === 1 && e === numPages) continue;
+      const opt = document.createElement("option");
+      opt.value = `${s}-${e}`;
+      opt.textContent = `Pages ${s}\u2013${e}`;
+      grpRanges.appendChild(opt);
+    }
+    if (grpRanges.children.length) pagesSelect.appendChild(grpRanges);
+  }
+}
+
+async function updatePagesDropdownFromFile(file) {
+  buildPagesDropdown(0);
+  if (!file || !window.pdfjsLib) return;
+  try {
+    const buf = await file.arrayBuffer();
+    const doc = await window.pdfjsLib.getDocument({ data: buf }).promise;
+    buildPagesDropdown(doc.numPages);
+  } catch (_) { /* leave as All pages if pdf.js can't read it */ }
+}
 
 dropZone.addEventListener("click", () => pdfInput.click());
 pdfInput.addEventListener("change", () => {
-  if (pdfInput.files[0]) fileName.textContent = pdfInput.files[0].name;
+  if (pdfInput.files[0]) {
+    fileName.textContent = pdfInput.files[0].name;
+    updatePagesDropdownFromFile(pdfInput.files[0]);
+  }
 });
 dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("dragover"); });
 dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
@@ -2090,6 +2141,7 @@ dropZone.addEventListener("drop", e => {
     const dt = new DataTransfer(); dt.items.add(f);
     pdfInput.files = dt.files;
     fileName.textContent = f.name;
+    updatePagesDropdownFromFile(f);
   }
 });
 
