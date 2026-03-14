@@ -7,10 +7,8 @@ import tempfile
 import threading
 import time
 from datetime import datetime, timezone
-from urllib.parse import urlparse
 
 import fitz  # PyMuPDF
-import requests
 from PIL import Image
 from flask import Flask, request, jsonify, send_file, render_template_string
 from pymongo import MongoClient
@@ -142,8 +140,6 @@ RAZORPAY_DONATION_NAME = os.environ.get("RAZORPAY_DONATION_NAME", "Swift Convert
 RAZORPAY_DONATION_DESCRIPTION = os.environ.get(
   "RAZORPAY_DONATION_DESCRIPTION", "Support Swift Convert"
 )
-PDFCO_API_KEY = os.environ.get("PDFCO_API_KEY", "").strip()
-PDFCO_BASE_URL = os.environ.get("PDFCO_BASE_URL", "https://api.pdf.co/v1").rstrip("/")
 
 razorpay_client = None
 if RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET and razorpay:
@@ -242,158 +238,6 @@ def parse_page_groups(groups_str: str, total_pages: int) -> list:
     return groups
 
 
-def build_page_ranges(indices: list) -> str:
-    if not indices:
-        return ""
-
-    ordered = sorted(set(indices))
-    ranges = []
-    start = ordered[0]
-    prev = ordered[0]
-
-    for current in ordered[1:]:
-        if current == prev + 1:
-            prev = current
-            continue
-        if start == prev:
-            ranges.append(str(start + 1))
-        else:
-            ranges.append(f"{start + 1}-{prev + 1}")
-        start = current
-        prev = current
-
-    if start == prev:
-        ranges.append(str(start + 1))
-    else:
-        ranges.append(f"{start + 1}-{prev + 1}")
-
-    return ",".join(ranges)
-
-
-def download_binary(url: str) -> bytes:
-    res = requests.get(url, timeout=180)
-    res.raise_for_status()
-    return res.content
-
-
-def pdfco_error_message(response: requests.Response, fallback: str) -> str:
-  try:
-    payload = response.json()
-  except ValueError:
-    text = (response.text or "").strip()
-    if text:
-      return f"{fallback} ({response.status_code}): {text[:240]}"
-    return f"{fallback} ({response.status_code})"
-
-  message = payload.get("message") or payload.get("error") or payload.get("status")
-  if message:
-    return f"{fallback} ({response.status_code}): {message}"
-  return f"{fallback} ({response.status_code})"
-
-
-def convert_pdf_with_pdfco(pdf_path: str, fmt: str, pages: list, tmp_dir: str):
-    if not PDFCO_API_KEY:
-        raise RuntimeError("PDF.co API key is not configured on this server.")
-
-    headers = {
-        "x-api-key": PDFCO_API_KEY,
-    }
-
-    with open(pdf_path, "rb") as f:
-        upload_res = requests.post(
-            f"{PDFCO_BASE_URL}/file/upload",
-            headers=headers,
-            files={"file": (os.path.basename(pdf_path), f, "application/pdf")},
-            timeout=120,
-        )
-
-    if upload_res.status_code >= 400:
-      raise RuntimeError(pdfco_error_message(upload_res, "PDF.co upload failed"))
-    upload_data = upload_res.json()
-    if upload_data.get("error") is True:
-        raise RuntimeError(upload_data.get("message") or "Failed to upload PDF to PDF.co.")
-
-    uploaded_url = upload_data.get("url")
-    if not uploaded_url:
-        raise RuntimeError("PDF.co upload did not return a file URL.")
-
-    page_spec = build_page_ranges(pages)
-    endpoint = "png" if fmt == "PNG" else "jpg"
-    convert_payload = {
-        "url": uploaded_url,
-        "async": False,
-    }
-    if page_spec:
-        convert_payload["pages"] = page_spec
-
-    convert_res = requests.post(
-        f"{PDFCO_BASE_URL}/pdf/convert/to/{endpoint}",
-        headers={**headers, "Content-Type": "application/json"},
-        json=convert_payload,
-        timeout=240,
-    )
-    if convert_res.status_code >= 400:
-      raise RuntimeError(pdfco_error_message(convert_res, "PDF.co convert failed"))
-    convert_data = convert_res.json()
-
-    if convert_data.get("error") is True:
-        raise RuntimeError(convert_data.get("message") or "PDF.co conversion failed.")
-
-    urls = convert_data.get("urls") or []
-    result_url = convert_data.get("url")
-    ext = "jpg" if fmt == "JPEG" else "png"
-    image_names = []
-    zip_name = "converted_images.zip"
-    zip_path = os.path.join(tmp_dir, zip_name)
-
-    if urls:
-        for idx, image_url in enumerate(urls):
-            page_number = pages[idx] + 1 if idx < len(pages) else idx + 1
-            image_name = f"page_{page_number:04d}.{ext}"
-            image_path = os.path.join(tmp_dir, image_name)
-            with open(image_path, "wb") as img_file:
-                img_file.write(download_binary(image_url))
-            image_names.append(image_name)
-
-        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED, compresslevel=5) as zf:
-            for image_name in image_names:
-                zf.write(os.path.join(tmp_dir, image_name), arcname=image_name)
-        return image_names, zip_name
-
-    if not result_url:
-        raise RuntimeError("PDF.co conversion did not return result files.")
-
-    result_bytes = download_binary(result_url)
-    parsed = urlparse(result_url)
-    lower_path = parsed.path.lower()
-
-    if lower_path.endswith(".zip"):
-        with open(zip_path, "wb") as zip_file:
-            zip_file.write(result_bytes)
-
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            zf.extractall(tmp_dir)
-            image_names = [
-                os.path.basename(n)
-                for n in zf.namelist()
-                if n.lower().endswith((".png", ".jpg", ".jpeg"))
-            ]
-        image_names.sort()
-        if not image_names:
-            raise RuntimeError("PDF.co returned an empty ZIP file.")
-        return image_names, zip_name
-
-    single_name = f"page_{(pages[0] + 1) if pages else 1:04d}.{ext}"
-    single_path = os.path.join(tmp_dir, single_name)
-    with open(single_path, "wb") as img_file:
-        img_file.write(result_bytes)
-
-    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED, compresslevel=5) as zf:
-        zf.write(single_path, arcname=single_name)
-
-    return [single_name], zip_name
-
-
 def cleanup_old_sessions():
     while True:
         time.sleep(60)
@@ -443,23 +287,44 @@ def convert():
         pdf_path = os.path.join(tmp_dir, "input.pdf")
         pdf_file.save(pdf_path)
 
+        zip_name = "converted_images.zip"
+        zip_path = os.path.join(tmp_dir, zip_name)
+        image_names = []
+
         doc = fitz.open(pdf_path)
         try:
-            total = len(doc)
-        finally:
-            doc.close()
+          total = len(doc)
 
-        pages = parse_page_range(page_range_str, total)
-        if not pages:
+          pages = parse_page_range(page_range_str, total)
+          if not pages:
             return jsonify({"error": "No pages selected."}), 400
 
-        image_names, zip_name = convert_pdf_with_pdfco(pdf_path, fmt, pages, tmp_dir)
+          scale = dpi / 72.0
+          mat = fitz.Matrix(scale, scale)
+          ext = "jpg" if fmt == "JPEG" else "png"
+
+          with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED, compresslevel=5) as zf:
+            for idx in pages:
+              page = doc[idx]
+              pix = page.get_pixmap(matrix=mat, alpha=False)
+              name = f"page_{idx + 1:04d}.{ext}"
+              img_path = os.path.join(tmp_dir, name)
+
+              if fmt == "JPEG":
+                pix.save(img_path, jpg_quality=92)
+              else:
+                pix.save(img_path)
+
+              image_names.append(name)
+              zf.write(img_path, arcname=name)
+        finally:
+          doc.close()
 
         SESSIONS[session_id] = {
-            "dir": tmp_dir,
-            "images": image_names,
-            "zip": zip_name,
-            "created": time.time(),
+          "dir": tmp_dir,
+          "images": image_names,
+          "zip": zip_name,
+          "created": time.time(),
         }
 
         if db is not None:
