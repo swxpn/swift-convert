@@ -5,13 +5,9 @@ import { NextResponse } from "next/server";
 
 import { runConversionWorker } from "../../../lib/pythonRunner";
 import { createSession } from "../../../lib/sessionStore";
+import { writeUploadedFile } from "../../../lib/uploadFile";
 
 export const runtime = "nodejs";
-
-async function writeUploadedFile(file, destination) {
-  const bytes = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(destination, bytes);
-}
 
 export async function POST(request) {
   try {
@@ -25,16 +21,16 @@ export async function POST(request) {
     }
 
     const sessionDir = await fs.mkdtemp(path.join(os.tmpdir(), "img2pdf_"));
-    const imagePaths = [];
+    const imagePaths = await Promise.all(
+      files.map(async (file) => {
+        const ext = path.extname(file.name || "").toLowerCase() || ".img";
+        const filePath = path.join(sessionDir, `${crypto.randomUUID()}${ext}`);
+        await writeUploadedFile(file, filePath);
+        return filePath;
+      })
+    );
 
-    for (const file of files) {
-      const ext = path.extname(file.name || "").toLowerCase() || ".img";
-      const filePath = path.join(sessionDir, `${crypto.randomUUID()}${ext}`);
-      await writeUploadedFile(file, filePath);
-      imagePaths.push(filePath);
-    }
-
-    const result = runConversionWorker("img2pdf", {
+    const result = await runConversionWorker("img2pdf", {
       image_paths: imagePaths,
       tmp_dir: sessionDir,
       page_size: pageSize,

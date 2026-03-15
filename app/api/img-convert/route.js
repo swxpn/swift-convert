@@ -9,32 +9,40 @@ import { writeUploadedFile } from "../../../lib/uploadFile";
 
 export const runtime = "nodejs";
 
-function isTruthy(value) {
-  const normalized = String(value || "").trim().toLowerCase();
-  return ["1", "true", "yes", "on"].includes(normalized);
-}
-
 export async function POST(request) {
   try {
     const form = await request.formData();
     const image = form.get("image");
-    const targetPercent = Number(form.get("target_percent") || 30);
-    const forceCompression = isTruthy(form.get("force_compression"));
+    const targetFormat = String(form.get("target_format") || "JPEG").toUpperCase();
 
     if (!image || typeof image === "string" || !image.name) {
       return NextResponse.json({ error: "No image file provided." }, { status: 400 });
     }
 
-    const ext = path.extname(image.name || "").toLowerCase() || ".img";
-    const sessionDir = await fs.mkdtemp(path.join(os.tmpdir(), "imgcompress_"));
-    const inputPath = path.join(sessionDir, `input${ext}`);
+    const normalizedTarget = targetFormat === "JPG" ? "JPEG" : targetFormat;
+    if (!["PNG", "JPEG"].includes(normalizedTarget)) {
+      return NextResponse.json(
+        { error: "Target format must be PNG or JPEG." },
+        { status: 400 }
+      );
+    }
+
+    const ext = path.extname(image.name || "").toLowerCase();
+    if (![".png", ".jpg", ".jpeg"].includes(ext)) {
+      return NextResponse.json(
+        { error: "Only PNG and JPEG files are supported." },
+        { status: 400 }
+      );
+    }
+
+    const sessionDir = await fs.mkdtemp(path.join(os.tmpdir(), "imgconvert_"));
+    const inputPath = path.join(sessionDir, `input${ext || ".img"}`);
     await writeUploadedFile(image, inputPath);
 
-    const result = await runConversionWorker("compress_image", {
+    const result = await runConversionWorker("convert_image_format", {
       input_path: inputPath,
       tmp_dir: sessionDir,
-      target_percent: targetPercent,
-      force_compression: forceCompression,
+      target_format: normalizedTarget,
       original_filename: image.name,
     });
 
@@ -45,17 +53,14 @@ export async function POST(request) {
     return NextResponse.json({
       session: sessionId,
       image: `/api/download/${sessionId}/${result.image_name}`,
+      source_format: result.source_format,
+      target_format: result.target_format,
       original_bytes: result.original_bytes,
-      compressed_bytes: result.compressed_bytes,
-      reduction_percent: result.reduction_percent,
-      target_percent: result.target_percent,
-      achieved_target: result.achieved_target,
-      force_requested: result.force_requested,
-      forced_used: result.forced_used,
+      converted_bytes: result.converted_bytes,
     });
   } catch (error) {
     return NextResponse.json(
-      { error: `Image compression failed: ${error.message}` },
+      { error: `Image conversion failed: ${error.message}` },
       { status: 500 }
     );
   }

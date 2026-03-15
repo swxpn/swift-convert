@@ -5,13 +5,9 @@ import { NextResponse } from "next/server";
 
 import { runConversionWorker } from "../../../lib/pythonRunner";
 import { createSession } from "../../../lib/sessionStore";
+import { writeUploadedFile } from "../../../lib/uploadFile";
 
 export const runtime = "nodejs";
-
-async function writeUploadedFile(file, destination) {
-  const bytes = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(destination, bytes);
-}
 
 function isTruthy(value) {
   const normalized = String(value || "").trim().toLowerCase();
@@ -33,7 +29,7 @@ export async function POST(request) {
     const inputPath = path.join(sessionDir, "input.pdf");
     await writeUploadedFile(pdf, inputPath);
 
-    const result = runConversionWorker("compress_pdf", {
+    const result = await runConversionWorker("compress_pdf", {
       input_path: inputPath,
       tmp_dir: sessionDir,
       target_percent: targetPercent,

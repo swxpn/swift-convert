@@ -1,5 +1,6 @@
 import path from "node:path";
-import { promises as fs } from "node:fs";
+import { createReadStream, promises as fs } from "node:fs";
+import { Readable } from "node:stream";
 import { NextResponse } from "next/server";
 
 import { getSession } from "../../../../../lib/sessionStore";
@@ -22,19 +23,21 @@ export async function GET(_request, { params }) {
   const filePath = path.join(meta.dir, name);
 
   try {
-    const content = await fs.readFile(filePath);
+    const stats = await fs.stat(filePath);
+    const stream = Readable.toWeb(createReadStream(filePath));
     const type = contentTypeFor(name);
     const asAttachment = name.endsWith(".zip") || name.endsWith(".pdf");
 
     const headers = {
       "Content-Type": type,
+      "Content-Length": String(stats.size),
       "Cache-Control": "no-store",
     };
     if (asAttachment) {
       headers["Content-Disposition"] = `attachment; filename="${name}"`;
     }
 
-    return new NextResponse(content, { status: 200, headers });
+    return new NextResponse(stream, { status: 200, headers });
   } catch {
     return new NextResponse("File not found.", { status: 404 });
   }

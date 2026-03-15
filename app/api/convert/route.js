@@ -5,13 +5,9 @@ import { NextResponse } from "next/server";
 
 import { runConversionWorker } from "../../../lib/pythonRunner";
 import { createSession } from "../../../lib/sessionStore";
+import { writeUploadedFile } from "../../../lib/uploadFile";
 
 export const runtime = "nodejs";
-
-async function writeUploadedFile(file, destination) {
-  const bytes = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(destination, bytes);
-}
 
 export async function POST(request) {
   try {
@@ -29,7 +25,7 @@ export async function POST(request) {
     const inputPath = path.join(sessionDir, "input.pdf");
     await writeUploadedFile(pdf, inputPath);
 
-    const result = runConversionWorker("convert", {
+    const result = await runConversionWorker("convert", {
       input_path: inputPath,
       tmp_dir: sessionDir,
       format,

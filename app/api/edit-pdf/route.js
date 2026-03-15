@@ -5,13 +5,9 @@ import { NextResponse } from "next/server";
 
 import { runConversionWorker } from "../../../lib/pythonRunner";
 import { createSession } from "../../../lib/sessionStore";
+import { writeUploadedFile } from "../../../lib/uploadFile";
 
 export const runtime = "nodejs";
-
-async function writeUploadedFile(file, destination) {
-  const bytes = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(destination, bytes);
-}
 
 export async function POST(request) {
   try {
@@ -33,14 +29,15 @@ export async function POST(request) {
         );
       }
 
-      const inputPaths = [];
-      for (const [index, file] of files.entries()) {
-        const target = path.join(sessionDir, `merge_${index}.pdf`);
-        await writeUploadedFile(file, target);
-        inputPaths.push(target);
-      }
+      const inputPaths = await Promise.all(
+        files.map(async (file, index) => {
+          const target = path.join(sessionDir, `merge_${index}.pdf`);
+          await writeUploadedFile(file, target);
+          return target;
+        })
+      );
 
-      const result = runConversionWorker("modify_pdf", {
+      const result = await runConversionWorker("modify_pdf", {
         operation,
         tmp_dir: sessionDir,
         input_paths: inputPaths,
@@ -81,7 +78,7 @@ export async function POST(request) {
     const inputPath = path.join(sessionDir, "input.pdf");
     await writeUploadedFile(pdf, inputPath);
 
-    const result = runConversionWorker("modify_pdf", {
+    const result = await runConversionWorker("modify_pdf", {
       operation,
       tmp_dir: sessionDir,
       input_path: inputPath,

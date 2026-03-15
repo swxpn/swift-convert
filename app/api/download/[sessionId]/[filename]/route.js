@@ -1,5 +1,6 @@
 import path from "node:path";
-import { promises as fs } from "node:fs";
+import { createReadStream, promises as fs } from "node:fs";
+import { Readable } from "node:stream";
 import { NextResponse } from "next/server";
 
 import { getSession } from "../../../../../lib/sessionStore";
@@ -22,11 +23,14 @@ export async function GET(_request, { params }) {
   const filePath = path.join(meta.dir, name);
 
   try {
-    const content = await fs.readFile(filePath);
-    return new NextResponse(content, {
+    const stats = await fs.stat(filePath);
+    const stream = Readable.toWeb(createReadStream(filePath));
+
+    return new NextResponse(stream, {
       status: 200,
       headers: {
         "Content-Type": contentTypeFor(name),
+        "Content-Length": String(stats.size),
         "Cache-Control": "no-store",
         "Content-Disposition": `attachment; filename="${name}"`,
       },

@@ -7,6 +7,7 @@ import zipfile
 
 import fitz
 from PIL import Image
+from PIL import ImageFile
 
 
 ALLOWED_IMAGE_EXTENSIONS = {
@@ -444,6 +445,70 @@ def cmd_compress_image(payload):
     }
 
 
+def cmd_convert_image_format(payload):
+    input_path = payload["input_path"]
+    tmp_dir = payload["tmp_dir"]
+    original_filename = str(payload.get("original_filename", "image"))
+    target_format = str(payload.get("target_format", "JPEG")).upper()
+    jpeg_quality = int(payload.get("jpeg_quality", 92))
+
+    if target_format == "JPG":
+        target_format = "JPEG"
+    if target_format not in {"PNG", "JPEG"}:
+        raise ValueError("Target format must be PNG or JPEG.")
+
+    source_ext = os.path.splitext(input_path)[1].lower()
+    if source_ext not in {".png", ".jpg", ".jpeg"}:
+        raise ValueError("Only PNG and JPEG files are supported for format conversion.")
+
+    source_format = "PNG" if source_ext == ".png" else "JPEG"
+    if source_format == target_format:
+        raise ValueError("Source and target formats must be different.")
+
+    jpeg_quality = max(30, min(95, jpeg_quality))
+    original_size = os.path.getsize(input_path)
+
+    base = os.path.splitext(os.path.basename(original_filename))[0] or "image"
+    out_ext = "jpg" if target_format == "JPEG" else "png"
+    out_name = f"converted-{base}.{out_ext}"
+    out_path = os.path.join(tmp_dir, out_name)
+
+    # Accept slightly malformed image streams that browsers still decode.
+    ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+    with Image.open(input_path) as source_img:
+        source_img.load()
+
+        if target_format == "JPEG":
+            if "A" in source_img.getbands():
+                bg = Image.new("RGB", source_img.size, (255, 255, 255))
+                rgba = source_img.convert("RGBA")
+                bg.paste(rgba, mask=rgba.getchannel("A"))
+                out_img = bg
+            else:
+                out_img = source_img.convert("RGB") if source_img.mode != "RGB" else source_img.copy()
+
+            out_img.save(
+                out_path,
+                format="JPEG",
+                quality=jpeg_quality,
+                optimize=True,
+                progressive=True,
+            )
+        else:
+            out_img = source_img.convert("RGBA") if "A" in source_img.getbands() else source_img.copy()
+            out_img.save(out_path, format="PNG", optimize=True, compress_level=9)
+
+    converted_size = os.path.getsize(out_path)
+    return {
+        "image_name": out_name,
+        "source_format": source_format,
+        "target_format": target_format,
+        "original_bytes": original_size,
+        "converted_bytes": converted_size,
+    }
+
+
 def cmd_modify_pdf(payload):
     operation = str(payload.get("operation", "")).strip().lower()
     if operation not in {"merge", "visual_edit"}:
@@ -542,6 +607,7 @@ COMMANDS = {
     "img2pdf": cmd_img2pdf,
     "compress_pdf": cmd_compress_pdf,
     "compress_image": cmd_compress_image,
+    "convert_image_format": cmd_convert_image_format,
     "modify_pdf": cmd_modify_pdf,
 }
 
