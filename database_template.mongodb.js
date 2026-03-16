@@ -1,10 +1,10 @@
 /* global use, db */
-// MongoDB Playground template for pdf_img_converter/app.py
+// MongoDB Playground template for swift-convert/app.py
 // Usage:
 // 1) Connect to your MongoDB Atlas cluster in VS Code.
 // 2) Open this file and run sections as needed.
 
-use('pdf_img_converter');
+use('swift-convert');
 
 // 1) Create the conversions collection with schema validation.
 //    This supports both conversion types used by app.py:

@@ -117,7 +117,7 @@ if MONGO_URI:
     try:
         mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
         mongo_client.admin.command("ping")
-        db = mongo_client.get_default_database("pdf_img_converter")
+        db = mongo_client.get_default_database("swift-convert")
         ensure_mongo_schema(db)
         ensure_mongo_indexes(db)
         print("Connected to MongoDB Atlas successfully.")
