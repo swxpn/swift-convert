@@ -780,81 +780,6 @@ def compress_image():
         return jsonify({"error": f"Image compression failed: {e}"}), 500
 
 
-@app.route("/img-convert", methods=["POST"])
-def convert_image_format():
-    image_file = request.files.get("image")
-    target_format = request.form.get("target_format", "PNG").upper()
-
-    if not image_file or image_file.filename == "":
-        return jsonify({"error": "No image file provided."}), 400
-
-    if target_format not in ("PNG", "JPEG"):
-        return jsonify({"error": "Target format must be PNG or JPEG."}), 400
-
-    ext = os.path.splitext(image_file.filename)[1].lower()
-    if ext not in ALLOWED_IMAGE_EXTENSIONS:
-        return jsonify({"error": "Unsupported image format."}), 400
-
-    session_id = uuid.uuid4().hex
-    tmp_dir = tempfile.mkdtemp(prefix=f"imgconvert_{session_id}_")
-
-    try:
-        input_path = os.path.join(tmp_dir, f"input{ext if ext else '.img'}")
-        image_file.save(input_path)
-        original_size = os.path.getsize(input_path)
-
-        with Image.open(input_path) as img:
-            img.load()
-
-            # Determine source format
-            source_format = "PNG" if ext.lower() in (".png",) else "JPEG"
-
-            # Convert to target format
-            if target_format == "PNG":
-                output_filename = "converted.png"
-                output_path = os.path.join(tmp_dir, output_filename)
-                if img.mode == "RGBA":
-                    img.save(output_path, format="PNG", optimize=True, compress_level=9)
-                else:
-                    if img.mode != "RGB":
-                        img = img.convert("RGB")
-                    img.save(output_path, format="PNG", optimize=True, compress_level=9)
-            else:  # JPEG
-                output_filename = "converted.jpg"
-                output_path = os.path.join(tmp_dir, output_filename)
-                if img.mode != "RGB":
-                    img = img.convert("RGB")
-                img.save(output_path, format="JPEG", quality=85, optimize=True, progressive=True)
-
-            converted_size = os.path.getsize(output_path)
-
-            # Store in session
-            SESSIONS[session_id] = {
-                "dir": tmp_dir,
-                "files": [output_filename],
-                "created": time.time(),
-            }
-
-            file_url = f"/file/{session_id}/{output_filename}"
-
-            return jsonify(
-                {
-                    "success": True,
-                    "image": file_url,
-                    "source_format": source_format,
-                    "target_format": target_format,
-                    "original_bytes": original_size,
-                    "converted_bytes": converted_size,
-                }
-            )
-
-    except Exception as e:
-        import shutil
-
-        shutil.rmtree(tmp_dir, ignore_errors=True)
-        return jsonify({"error": f"Image conversion failed: {e}"}), 500
-
-
 @app.route("/edit-pdf", methods=["POST"])
 def modify_pdf():
     operation = request.form.get("operation", "").strip().lower()
@@ -1087,7 +1012,7 @@ HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDF &amp; Image Converter</title>
+<title>Swift Convert</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="shortcut icon" href="/favicon.svg">
 <script>
@@ -1143,7 +1068,7 @@ HTML = """<!DOCTYPE html>
     font-family: "Poppins", sans-serif;
     color: var(--sw-ink);
     min-height: 100vh;
-    padding-bottom: 260px;
+    padding-bottom: 72px;
     transition: background .22s ease, color .22s ease;
     background:
       radial-gradient(circle at 85% -10%, rgba(255, 216, 189, .95) 0%, rgba(255, 216, 189, 0) 40%),
@@ -1184,24 +1109,6 @@ HTML = """<!DOCTYPE html>
     letter-spacing: .2px;
   }
 
-  .brand-logo {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    border: 0;
-    background: transparent;
-    display: grid;
-    place-items: center;
-    box-shadow: none;
-    overflow: hidden;
-  }
-
-  .brand-logo img {
-    width: 30px;
-    height: 30px;
-    display: block;
-  }
-
   .brand-title-wrap {
     display: flex;
     flex-direction: column;
@@ -1220,64 +1127,19 @@ HTML = """<!DOCTYPE html>
   .brand-badge {
     width: 34px;
     height: 34px;
-    heme-toggle {
-    flex: 0 0 auto;
-  }
-
-  .tborder-radius: 10px;
+    border-radius: 10px;
     background: linear-gradient(135deg, var(--sw-orange), var(--sw-orange-deep));
     display: grid;
     place-items: center;
-    left: 50%;
-    right: auto;
-    bottom: 1rem;
-    display: flex;
-    justify-content: center;
-    z-index: 999;
-    background: transparent;
-    border: 0;
-    padding: 0;
-    transform: translateX(-50%);
-  }
-
-  .feature-blurb {
-    position: fixed;
-    left: 50%;
-    bottom: 4.4rem;
-    transform: translateX(-50%);
-    width: min(980px, calc(100% - 2rem));
-    background: linear-gradient(130deg, var(--sw-card) 0%, var(--sw-surface-soft) 100%);
-    border: 1px solid var(--sw-line);
-    border-radius: 16px;
-    box-shadow: 0 12px 32px var(--sw-shadow);
-    padding: .95rem 1rem;
-    z-index: 998;
-    backdrop-filter: saturate(1.15) blur(4px);
-  }
-
-  .feature-blurb h3 {
-    font-size: .98rem;
-    line-height: 1.25;
-    margin-bottom: .35rem;
-  }
-
-  .feature-blurb p {
-    color: var(--sw-muted);
-    font-size: .86rem;
-    line-height: 1.55;
-  }
-
-  #donateBtn {
-    border-color: transparent;
-    background: linear-gradient(135deg, var(--sw-orange), var(--sw-orange-deep));
     color: #fff;
-    box-shadow: 0 10px 24px var(--sw-btn-shadow);
-    padding: .6rem 1.05rem;
-    font-weight: 700;
+    font-size: 1rem;
+    font-weight: 800;
+    box-shadow: 0 10px 22px rgba(252, 128, 25, .33);
+    border: none;
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease;
   }
 
-  #donateBtn:hover {
-    box-shadow: 0 12px 26px var(--sw-btn-shadow)
   .brand-badge:hover {
     transform: translateY(-1px);
     box-shadow: 0 12px 24px rgba(252, 128, 25, .38);
@@ -1348,8 +1210,7 @@ HTML = """<!DOCTYPE html>
     font-weight: 600;
     outline: none;
   }
-  margin-left: auto;
-  
+
   .donate-amount:focus {
     border-color: var(--sw-orange);
     box-shadow: 0 0 0 3px rgba(252, 128, 25, .2);
@@ -1441,8 +1302,7 @@ HTML = """<!DOCTYPE html>
     padding: .1rem 0;
     border-radius: 0;
     font-size: .74rem;
-    font-wenth-child(6) { animation-delay: .29s; }
-  .tab-btn:ight: 700;
+    font-weight: 700;
     letter-spacing: .35px;
     text-transform: uppercase;
     animation: rise .5s ease-out both;
@@ -1877,19 +1737,8 @@ HTML = """<!DOCTYPE html>
     padding: .38rem .3rem;
     border: 1px solid var(--sw-line);
     border-radius: 8px;
-    background: var(-
-      width: 100%;
-      justify-content: space-between;
-    }
-    .field-grid { grid-template-columns: 1fr; }
-    body { padding-bottom: 300px; }
-    .feature-blurb {
-      bottom: 4.8rem;
-      width: calc(100% - 1rem);
-      padding: .9rem;
-    }
-    .feature-blurb h3 { font-size: .9rem; }
-    .feature-blurb p { font-size: .8rem
+    background: var(--sw-surface-tint);
+    color: var(--sw-ink);
     font-size: .75rem;
     font-weight: 700;
     cursor: pointer;
@@ -1941,18 +1790,17 @@ HTML = """<!DOCTYPE html>
   <div class="container">
     <div class="topbar">
       <div class="brand">
-        <span class="brand-logo" aria-hidden="true"><img src="/favicon.svg" alt=""></span>
+        <button type="button" id="themeToggle" class="brand-badge" aria-label="Toggle theme" title="Toggle theme"><span id="themeIcon">☀</span></button>
         <span class="brand-title-wrap"><span>Swift Convert</span><span class="brand-powered">powered by vercel</span></span>
       </div>
       <div class="topbar-actions">
         <div class="top-note">Fast, clean, and one-click file delivery</div>
-        <button type="button" id="themeToggle" class="brand-badge theme-toggle" aria-label="Toggle theme" title="Toggle theme"><span id="themeIcon">☀</span></button>
       </div>
     </div>
     <div class="hero-card">
       <div class="hero-grid">
         <div>
-          <h1>Free & Quick Conversions?</h1>
+          <h1>Free & Quick conversions?</h1>
           <p>Upload PDFs or images, pick your format, and get instantly.</p>
         </div>
         <div class="pill-row">
@@ -1971,7 +1819,6 @@ HTML = """<!DOCTYPE html>
   <button class="tab-btn" onclick="switchTab('pdfedit')">Edit PDF</button>
   <button class="tab-btn" onclick="switchTab('pdfcompress')">Compress PDF</button>
   <button class="tab-btn" onclick="switchTab('imgcompress')">Compress Image</button>
-  <button class="tab-btn" onclick="switchTab('imgformat')">PNG &harr; JPEG</button>
 </div>
 
 <main id="tab-pdf2img" class="tab-content active">
@@ -2058,38 +1905,6 @@ HTML = """<!DOCTYPE html>
   <div class="panel right">
     <h2>Compression Result</h2>
     <div id="imgCompressResult" class="empty">Image compression details will appear here.</div>
-  </div>
-</main>
-
-<main id="tab-imgformat" class="tab-content">
-  <div class="panel">
-    <h2>Image Format Conversion</h2>
-
-    <div class="field">
-      <div class="drop-zone" id="imgFormatDropZone">
-        <input type="file" id="imgFormatInput" accept=".png,.jpg,.jpeg,image/png,image/jpeg">
-        <svg width="36" height="36" fill="none" stroke="#bbb" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><rect x="3" y="16" width="18" height="5" rx="1.5"/></svg>
-        <p>Click or drag a PNG/JPEG image here</p>
-        <div class="filename" id="imgFormatFileName"></div>
-      </div>
-    </div>
-
-    <div class="field">
-      <label for="imgTargetFormat">Target Format</label>
-      <select id="imgTargetFormat">
-        <option value="JPEG" selected>JPEG</option>
-        <option value="PNG">PNG</option>
-      </select>
-    </div>
-
-    <button class="btn" id="imgFormatBtn" onclick="convertImageFormat()">Convert Image Format</button>
-    <div id="imgFormatStatus" class="status"></div>
-    <a id="imgFormatDownload" class="download-btn" download>Download Converted Image</a>
-  </div>
-
-  <div class="panel right">
-    <h2>Conversion Result</h2>
-    <div id="imgFormatResult" class="empty">Format conversion details will appear here.</div>
   </div>
 </main>
 
@@ -2222,50 +2037,7 @@ function switchTab(tab) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
-
-  const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(
-    el => el.getAttribute('onclick') === `switchTab('${tab}')`
-  );
-  if (activeBtn) activeBtn.classList.add('active');
-  updateFeatureBlurb(tab);
-}
-
-const FEATURE_BLURBS = {
-  pdf2img: {
-    title: "PDF to Image Converter",
-    description: "Convert each selected PDF page into crisp PNG or JPEG outputs with page-range control and DPI tuning. Use this mode when you want slide thumbnails, social media image snippets, or editable raster copies from document pages while preserving page order and quick ZIP download access."
-  },
-  img2pdf: {
-    title: "Image to PDF Builder",
-    description: "Combine multiple images into a single PDF with configurable page size and orientation. This workflow is ideal for receipts, scanned notes, forms, and project snapshots where you need one compact shareable document instead of a scattered set of image files."
-  },
-  pdfedit: {
-    title: "PDF Edit and Merge",
-    description: "Reorder pages visually, rotate specific slots, drop unwanted pages, or merge multiple PDFs into one final output. Pick this mode for cleanup tasks before sharing documents, preparing print-ready files, or assembling a final report from multiple source PDFs."
-  },
-  pdfcompress: {
-    title: "PDF Compression",
-    description: "Reduce PDF size intelligently using progressive compression profiles and optional force mode for harder reductions. This is best when uploads fail due to size limits or when you need faster sharing while still keeping the document readable and structurally intact."
-  },
-  imgcompress: {
-    title: "Image Compression",
-    description: "Shrink image file size with balanced quality controls and optional aggressive compression when strict size targets matter. Use this for quicker uploads, messaging apps, and web publishing where performance and bandwidth savings are more important than pixel-perfect originals."
-  },
-  imgformat: {
-    title: "PNG and JPEG Format Conversion",
-    description: "Switch between PNG and JPEG in one click depending on your use case: PNG for transparency and crisp graphics, JPEG for smaller photo-friendly files. This tool helps you quickly choose the right format before sharing, embedding, or archiving converted assets."
-  }
-};
-
-function updateFeatureBlurb(tab) {
-  const node = document.getElementById("featureBlurb");
-  const title = document.getElementById("featureBlurbTitle");
-  const text = document.getElementById("featureBlurbText");
-  if (!node || !title || !text) return;
-
-  const info = FEATURE_BLURBS[tab] || FEATURE_BLURBS.pdf2img;
-  title.textContent = info.title;
-  text.textContent = info.description;
+  event.target.classList.add('active');
 }
 
 const themeToggle = document.getElementById("themeToggle");
@@ -2808,98 +2580,6 @@ function formatBytes(bytes) {
   return `${(bytes / (1024 ** idx)).toFixed(idx === 0 ? 0 : 2)} ${units[idx]}`;
 }
 
-function inferImageFormat(fileName) {
-  const lower = String(fileName || "").toLowerCase();
-  if (lower.endsWith(".png")) return "PNG";
-  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "JPEG";
-  return "";
-}
-
-function syncImageTargetFormat() {
-  const file = imgFormatInput.files[0];
-  if (!file) return;
-  const sourceFormat = inferImageFormat(file.name);
-  if (sourceFormat === "PNG") imgTargetFormat.value = "JPEG";
-  if (sourceFormat === "JPEG") imgTargetFormat.value = "PNG";
-}
-
-imgFormatDropZone.addEventListener("click", () => imgFormatInput.click());
-imgFormatInput.addEventListener("change", () => {
-  const file = imgFormatInput.files[0];
-  imgFormatFileName.textContent = file ? file.name : "";
-  syncImageTargetFormat();
-});
-imgFormatDropZone.addEventListener("dragover", e => { e.preventDefault(); imgFormatDropZone.classList.add("dragover"); });
-imgFormatDropZone.addEventListener("dragleave", () => imgFormatDropZone.classList.remove("dragover"));
-imgFormatDropZone.addEventListener("drop", e => {
-  e.preventDefault();
-  imgFormatDropZone.classList.remove("dragover");
-  const f = e.dataTransfer.files[0];
-  if (!f) return;
-  const detected = inferImageFormat(f.name);
-  if (!detected) return;
-  const dt = new DataTransfer(); dt.items.add(f);
-  imgFormatInput.files = dt.files;
-  imgFormatFileName.textContent = f.name;
-  syncImageTargetFormat();
-});
-
-async function convertImageFormat() {
-  const file = imgFormatInput.files[0];
-  if (!file) { setStatus("imgFormatStatus", "Please select an image file.", "error"); return; }
-
-  const sourceFormat = inferImageFormat(file.name);
-  if (!sourceFormat) {
-    setStatus("imgFormatStatus", "Only PNG and JPEG files are supported.", "error");
-    return;
-  }
-
-  const targetFormat = imgTargetFormat.value;
-  if (sourceFormat === targetFormat) {
-    setStatus("imgFormatStatus", "Source and target formats must be different.", "error");
-    return;
-  }
-
-  const btn = document.getElementById("imgFormatBtn");
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Converting...';
-  setStatus("imgFormatStatus", "Uploading and converting...", "");
-
-  const form = new FormData();
-  form.append("image", file);
-  form.append("target_format", targetFormat);
-
-  try {
-    const res = await fetch("/img-convert", { method: "POST", body: form });
-    const data = await res.json();
-    if (!res.ok) { setStatus("imgFormatStatus", data.error || "Conversion failed.", "error"); return; }
-
-    setStatus("imgFormatStatus", `Converted ${data.source_format} to ${data.target_format}.`, "ok");
-
-    const result = document.getElementById("imgFormatResult");
-    result.className = "";
-    result.innerHTML = `
-      <p><strong>From:</strong> ${data.source_format}</p>
-      <p><strong>To:</strong> ${data.target_format}</p>
-      <p><strong>Original:</strong> ${formatBytes(data.original_bytes)}</p>
-      <p><strong>Converted:</strong> ${formatBytes(data.converted_bytes)}</p>
-    `;
-    result.style.animation = "none";
-    void result.offsetHeight;
-    result.style.animation = "rise .4s ease-out";
-
-    const dl = document.getElementById("imgFormatDownload");
-    dl.dataset.url = data.image;
-    dl.dataset.name = data.image.split('/').pop() || "converted-image";
-    dl.style.display = "block";
-  } catch (e) {
-    setStatus("imgFormatStatus", "Network error: " + e.message, "error");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Convert Image Format";
-  }
-}
-
 async function compressPdfFile() {
   const file = compressInput.files[0];
   if (!file) { setStatus("compressStatus", "Please select a PDF file.", "error"); return; }
@@ -3182,13 +2862,7 @@ document.getElementById("imgCompressDownload").addEventListener("click", (e) => 
   downloadFromEndpoint("imgCompressDownload", "imgCompressStatus");
 });
 
-document.getElementById("imgFormatDownload").addEventListener("click", (e) => {
-  e.preventDefault();
-  downloadFromEndpoint("imgFormatDownload", "imgFormatStatus");
-});
-
 document.addEventListener("DOMContentLoaded", () => {
-  updateFeatureBlurb("pdf2img");
   const donateBtn = document.getElementById("donateBtn");
   const donateModal = document.getElementById("donateModal");
   const donateCancel = document.getElementById("donateCancel");
@@ -3302,10 +2976,6 @@ function closeLightbox() {
 
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeLightbox(); });
 </script>
-<section class="feature-blurb" id="featureBlurb" aria-live="polite">
-  <h3 id="featureBlurbTitle">PDF to Image Converter</h3>
-  <p id="featureBlurbText">Convert each selected PDF page into crisp PNG or JPEG outputs with page-range control and DPI tuning. Use this mode when you want slide thumbnails, social media image snippets, or editable raster copies from document pages while preserving page order and quick ZIP download access.</p>
-</section>
 <div class="donate-bar">
   <button type="button" id="donateBtn" class="donate-btn">Donate</button>
 </div>
