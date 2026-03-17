@@ -780,6 +780,81 @@ def compress_image():
         return jsonify({"error": f"Image compression failed: {e}"}), 500
 
 
+@app.route("/img-convert", methods=["POST"])
+def convert_image_format():
+    image_file = request.files.get("image")
+    target_format = request.form.get("target_format", "PNG").upper()
+
+    if not image_file or image_file.filename == "":
+        return jsonify({"error": "No image file provided."}), 400
+
+    if target_format not in ("PNG", "JPEG"):
+        return jsonify({"error": "Target format must be PNG or JPEG."}), 400
+
+    ext = os.path.splitext(image_file.filename)[1].lower()
+    if ext not in ALLOWED_IMAGE_EXTENSIONS:
+        return jsonify({"error": "Unsupported image format."}), 400
+
+    session_id = uuid.uuid4().hex
+    tmp_dir = tempfile.mkdtemp(prefix=f"imgconvert_{session_id}_")
+
+    try:
+        input_path = os.path.join(tmp_dir, f"input{ext if ext else '.img'}")
+        image_file.save(input_path)
+        original_size = os.path.getsize(input_path)
+
+        with Image.open(input_path) as img:
+            img.load()
+
+            # Determine source format
+            source_format = "PNG" if ext.lower() in (".png",) else "JPEG"
+
+            # Convert to target format
+            if target_format == "PNG":
+                output_filename = "converted.png"
+                output_path = os.path.join(tmp_dir, output_filename)
+                if img.mode == "RGBA":
+                    img.save(output_path, format="PNG", optimize=True, compress_level=9)
+                else:
+                    if img.mode != "RGB":
+                        img = img.convert("RGB")
+                    img.save(output_path, format="PNG", optimize=True, compress_level=9)
+            else:  # JPEG
+                output_filename = "converted.jpg"
+                output_path = os.path.join(tmp_dir, output_filename)
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+                img.save(output_path, format="JPEG", quality=85, optimize=True, progressive=True)
+
+            converted_size = os.path.getsize(output_path)
+
+            # Store in session
+            SESSIONS[session_id] = {
+                "dir": tmp_dir,
+                "files": [output_filename],
+                "created": time.time(),
+            }
+
+            file_url = f"/file/{session_id}/{output_filename}"
+
+            return jsonify(
+                {
+                    "success": True,
+                    "image": file_url,
+                    "source_format": source_format,
+                    "target_format": target_format,
+                    "original_bytes": original_size,
+                    "converted_bytes": converted_size,
+                }
+            )
+
+    except Exception as e:
+        import shutil
+
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        return jsonify({"error": f"Image conversion failed: {e}"}), 500
+
+
 @app.route("/edit-pdf", methods=["POST"])
 def modify_pdf():
     operation = request.form.get("operation", "").strip().lower()
