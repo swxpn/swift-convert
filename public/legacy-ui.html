@@ -179,17 +179,12 @@
   }
 
   .feature-blurb {
-    position: fixed;
-    left: 50%;
-    bottom: 4.4rem;
-    transform: translateX(-50%);
-    width: min(980px, calc(100% - 2rem));
+    margin-top: 2rem;
     background: linear-gradient(130deg, var(--sw-card) 0%, var(--sw-surface-soft) 100%);
     border: 1px solid var(--sw-line);
     border-radius: 16px;
     box-shadow: 0 12px 32px var(--sw-shadow);
     padding: .95rem 1rem;
-    z-index: 998;
     backdrop-filter: saturate(1.15) blur(4px);
   }
 
@@ -1182,6 +1177,14 @@ function updateFeatureBlurb(tab) {
   const info = FEATURE_BLURBS[tab] || FEATURE_BLURBS.pdf2img;
   title.textContent = info.title;
   text.textContent = info.description;
+
+  const activeTab = document.getElementById('tab-' + tab);
+  if (activeTab) {
+    const previewBox = activeTab.querySelector('.panel.right');
+    if (previewBox) {
+      previewBox.appendChild(node);
+    }
+  }
 }
 
 const themeToggle = document.getElementById("themeToggle");
