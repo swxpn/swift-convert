@@ -9,8 +9,8 @@ import { contentTypeFor, safeFilename } from "../../../../../lib/httpFile";
 export const runtime = "nodejs";
 
 export async function GET(_request, { params }) {
-  const sessionId = params.sessionId;
-  const name = safeFilename(params.filename);
+  const { sessionId, filename } = await params;
+  const name = safeFilename(filename);
   if (!name) {
     return new NextResponse("File not found.", { status: 404 });
   }
