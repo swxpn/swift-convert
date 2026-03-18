@@ -4,14 +4,27 @@
   "scripts": {
     "dev": "next dev -p 5001",
     "build": "next build",
+    "postbuild": "node scripts/copyServerChunks.js",
     "start": "next start -p 5001",
+    "test": "vitest run",
     "lint": "next lint"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^0.1.97",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
+    "archiver": "^7.0.1",
     "next": "^15.2.1",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^5.5.207",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "sharp": "^0.32.5"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.1.7",
+    "vitest": "^4.1.0"
   }
 }

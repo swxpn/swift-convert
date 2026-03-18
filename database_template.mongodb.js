@@ -1,5 +1,5 @@
 /* global use, db */
-// MongoDB Playground template for swift-convert/app.py
+// MongoDB Playground template for swift-convert Next.js API routes
 // Usage:
 // 1) Connect to your MongoDB Atlas cluster in VS Code.
 // 2) Open this file and run sections as needed.
