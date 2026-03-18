@@ -42,9 +42,10 @@ export async function POST(request) {
       image: result.image_name,
     });
 
+    const sid = encodeURIComponent(sessionId);
     return NextResponse.json({
       session: sessionId,
-      image: `/api/download/${sessionId}/${result.image_name}`,
+      image: `/api/download/${sid}/${encodeURIComponent(result.image_name)}`,
       original_bytes: result.original_bytes,
       compressed_bytes: result.compressed_bytes,
       reduction_percent: result.reduction_percent,

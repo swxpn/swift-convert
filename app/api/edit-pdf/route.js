@@ -86,10 +86,11 @@ export async function POST(request) {
     });
 
     const sessionId = createSession(sessionDir, { file: result.filename });
+    const sid = encodeURIComponent(sessionId);
     return NextResponse.json({
       session: sessionId,
       operation,
-      file: `/api/download/${sessionId}/${result.filename}`,
+      file: `/api/download/${sid}/${encodeURIComponent(result.filename)}`,
       filename: result.filename,
       page_count: result.page_count,
       output_count: result.output_count,

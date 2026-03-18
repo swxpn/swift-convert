@@ -41,9 +41,10 @@ export async function POST(request) {
       pdf: result.pdf_name,
     });
 
+    const sid = encodeURIComponent(sessionId);
     return NextResponse.json({
       session: sessionId,
-      pdf: `/api/download/${sessionId}/${result.pdf_name}`,
+      pdf: `/api/download/${sid}/${encodeURIComponent(result.pdf_name)}`,
       original_bytes: result.original_bytes,
       compressed_bytes: result.compressed_bytes,
       reduction_percent: result.reduction_percent,

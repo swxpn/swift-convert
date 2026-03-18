@@ -1,4 +1,6 @@
-import { GET } from "../../../api/download/[sessionId]/[filename]/route";
-
+import { GET as apiGET } from "../../../api/download/[sessionId]/[filename]/route";
 export const runtime = "nodejs";
-export { GET };
+
+export async function GET(request, { params }) {
+  return apiGET(request, { params: await params });
+}

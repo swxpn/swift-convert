@@ -38,11 +38,12 @@ export async function POST(request) {
       zip: result.zip_name,
     });
 
+    const sid = encodeURIComponent(sessionId);
     return NextResponse.json({
       session: sessionId,
       count: result.count,
-      images: result.image_names.map((name) => `/api/file/${sessionId}/${name}`),
-      zip: `/api/download/${sessionId}/${result.zip_name}`,
+      images: result.image_names.map((name) => `/api/file/${sid}/${encodeURIComponent(name)}`),
+      zip: `/api/download/${sid}/${encodeURIComponent(result.zip_name)}`,
     });
   } catch (error) {
     return NextResponse.json(
