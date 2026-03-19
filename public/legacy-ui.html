@@ -1148,6 +1148,29 @@ function switchTab(tab) {
   updateFeatureBlurb(tab);
 }
 
+async function callApi(url, options = {}) {
+  try {
+    const res = await fetch(url, options);
+    if (res.status === 413) throw new Error("File too large (max 20MB).");
+    if (res.status === 404) throw new Error("File or session not found.");
+
+    const contentType = res.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Request failed.");
+      return data;
+    } else {
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt.substring(0, 100) || "Server error.");
+      }
+      return res; // Return raw response for non-JSON OK responses
+    }
+  } catch (err) {
+    throw new Error(err.message || "Network error.");
+  }
+}
+
 const FEATURE_BLURBS = {
   pdf2img: {
     title: "PDF to Image Converter",
@@ -1260,10 +1283,7 @@ async function convertPdf2Img() {
   form.append("pages", pages);
 
   try {
-    const res = await fetch("/convert", { method: "POST", body: form });
-    const data = await res.json();
-    if (!res.ok) { setStatus("status", data.error || "Conversion failed.", "error"); return; }
-
+    const data = await callApi("/convert", { method: "POST", body: form });
     setStatus("status", `Converted ${data.count} page(s) to ${fmt} at ${dpi} DPI.`, "ok");
     renderGallery(data.images);
     const dl = document.getElementById("downloadBtn");
@@ -1271,7 +1291,7 @@ async function convertPdf2Img() {
     dl.dataset.name = data.zip.split('/').pop() || "converted_images.zip";
     dl.style.display = "block";
   } catch (e) {
-    setStatus("status", "Network error: " + e.message, "error");
+    setStatus("status", e.message, "error");
   } finally {
     btn.disabled = false;
     btn.textContent = "Convert";
@@ -1355,17 +1375,14 @@ async function convertImg2Pdf() {
   form.append("orientation", orientation);
 
   try {
-    const res = await fetch("/img2pdf", { method: "POST", body: form });
-    const data = await res.json();
-    if (!res.ok) { setStatus("img2pdfStatus", data.error || "Conversion failed.", "error"); return; }
-
+    const data = await callApi("/img2pdf", { method: "POST", body: form });
     setStatus("img2pdfStatus", `Created PDF with ${data.pages} page(s).`, "ok");
     const dl = document.getElementById("img2pdfDownload");
     dl.dataset.url = data.pdf;
     dl.dataset.name = data.pdf.split('/').pop() || "converted.pdf";
     dl.style.display = "block";
   } catch (e) {
-    setStatus("img2pdfStatus", "Network error: " + e.message, "error");
+    setStatus("img2pdfStatus", e.message, "error");
   } finally {
     btn.disabled = false;
     btn.textContent = "Convert to PDF";
@@ -1792,10 +1809,7 @@ async function compressPdfFile() {
   form.append("force_compression", forceCompression.checked ? "true" : "false");
 
   try {
-    const res = await fetch("/compress-pdf", { method: "POST", body: form });
-    const data = await res.json();
-    if (!res.ok) { setStatus("compressStatus", data.error || "Compression failed.", "error"); return; }
-
+    const data = await callApi("/compress-pdf", { method: "POST", body: form });
     const hitTargetText = data.achieved_target ? "Target met" : "Best possible for this file";
     const forceText = data.forced_used ? " Forced mode applied." : "";
     setStatus("compressStatus", `Compression complete. ${hitTargetText}.`, "ok");
@@ -1820,7 +1834,7 @@ async function compressPdfFile() {
     dl.dataset.name = data.pdf.split('/').pop() || "compressed.pdf";
     dl.style.display = "block";
   } catch (e) {
-    setStatus("compressStatus", "Network error: " + e.message, "error");
+    setStatus("compressStatus", e.message, "error");
   } finally {
     btn.disabled = false;
     btn.textContent = "Compress PDF";
@@ -1844,10 +1858,7 @@ async function compressImageFile() {
   form.append("force_compression", imgForceCompression.checked ? "true" : "false");
 
   try {
-    const res = await fetch("/compress-image", { method: "POST", body: form });
-    const data = await res.json();
-    if (!res.ok) { setStatus("imgCompressStatus", data.error || "Compression failed.", "error"); return; }
-
+    const data = await callApi("/compress-image", { method: "POST", body: form });
     const hitTargetText = data.achieved_target ? "Target met" : "Best possible for this file";
     const forceText = data.forced_used ? " Forced mode applied." : "";
     setStatus("imgCompressStatus", `Compression complete. ${hitTargetText}.`, "ok");
@@ -1873,7 +1884,7 @@ async function compressImageFile() {
     dl.dataset.name = data.image.split('/').pop() || "compressed-image.jpg";
     dl.style.display = "block";
   } catch (e) {
-    setStatus("imgCompressStatus", "Network error: " + e.message, "error");
+    setStatus("imgCompressStatus", e.message, "error");
   } finally {
     btn.disabled = false;
     btn.textContent = "Compress Image";
@@ -1906,10 +1917,7 @@ async function convertImageFormat() {
   form.append("target_format", targetFormat);
 
   try {
-    const res = await fetch("/img-convert", { method: "POST", body: form });
-    const data = await res.json();
-    if (!res.ok) { setStatus("imgFormatStatus", data.error || "Conversion failed.", "error"); return; }
-
+    const data = await callApi("/img-convert", { method: "POST", body: form });
     setStatus("imgFormatStatus", `Converted ${data.source_format} to ${data.target_format}.`, "ok");
 
     const result = document.getElementById("imgFormatResult");
@@ -1929,7 +1937,7 @@ async function convertImageFormat() {
     dl.dataset.name = data.image.split('/').pop() || "converted-image";
     dl.style.display = "block";
   } catch (e) {
-    setStatus("imgFormatStatus", "Network error: " + e.message, "error");
+    setStatus("imgFormatStatus", e.message, "error");
   } finally {
     btn.disabled = false;
     btn.textContent = "Convert Image Format";
@@ -1954,13 +1962,7 @@ async function modifyPdf() {
     pdfEditFiles.forEach((file) => form.append("pdfs", file));
 
     try {
-      const res = await fetch("/edit-pdf", { method: "POST", body: form });
-      const data = await res.json();
-      if (!res.ok) {
-        setStatus("pdfEditStatus", data.error || "PDF merge failed.", "error");
-        return;
-      }
-
+      const data = await callApi("/edit-pdf", { method: "POST", body: form });
       setStatus("pdfEditStatus", data.summary || "PDFs merged successfully.", "ok");
 
       const dl = document.getElementById("pdfEditDownload");
@@ -1968,7 +1970,7 @@ async function modifyPdf() {
       dl.dataset.name = data.filename || "merged-document.pdf";
       dl.style.display = "block";
     } catch (e) {
-      setStatus("pdfEditStatus", "Network error: " + e.message, "error");
+      setStatus("pdfEditStatus", e.message, "error");
     } finally {
       btn.disabled = false;
       btn.textContent = "Merge PDFs";
@@ -2008,13 +2010,7 @@ async function modifyPdf() {
   form.append("slots_json", JSON.stringify(selectedSlots));
 
   try {
-    const res = await fetch("/edit-pdf", { method: "POST", body: form });
-    const data = await res.json();
-    if (!res.ok) {
-      setStatus("pdfEditStatus", data.error || "PDF edit failed.", "error");
-      return;
-    }
-
+    const data = await callApi("/edit-pdf", { method: "POST", body: form });
     setStatus("pdfEditStatus", data.summary || "PDF updated successfully.", "ok");
 
     const dl = document.getElementById("pdfEditDownload");
@@ -2022,7 +2018,7 @@ async function modifyPdf() {
     dl.dataset.name = data.filename || "edited.pdf";
     dl.style.display = "block";
   } catch (e) {
-    setStatus("pdfEditStatus", "Network error: " + e.message, "error");
+    setStatus("pdfEditStatus", e.message, "error");
   } finally {
     btn.disabled = false;
     btn.textContent = "Apply Page Edit";
@@ -2065,6 +2061,9 @@ async function downloadFromEndpoint(buttonId, statusId) {
 
   try {
     const res = await fetch(url, { cache: "no-store" });
+    if (res.status === 404) {
+      throw new Error("File or session not found. Please convert again.");
+    }
     if (!res.ok) {
       throw new Error(`Download failed (${res.status})`);
     }

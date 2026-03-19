@@ -1,9 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./scripts/render-pdf.mjs", "./node_modules/@napi-rs/canvas/**/*"],
+  },
+  serverExternalPackages: ["pdfjs-dist"],
   experimental: {
-    outputFileTracingIncludes: {
-      "/api/**/*": ["./scripts/render-pdf.mjs", "./node_modules/@napi-rs/canvas/**/*"],
+    serverActions: {
+      bodySizeLimit: "20mb",
     },
   },
   async headers() {
