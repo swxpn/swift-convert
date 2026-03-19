@@ -46,6 +46,7 @@ export async function POST(request) {
     return NextResponse.json({
       session: sessionId,
       pdf: `/api/download/${sid}/${encodeURIComponent(result.pdf_name)}`,
+      pages: result.pages,
     });
   } catch (error) {
     console.error(`[API/Img2PDF] Error: ${error.message}`, error);
