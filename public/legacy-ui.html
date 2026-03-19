@@ -55,11 +55,15 @@
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html {
+    background-color: var(--sw-bg);
+  }
+
   body {
     font-family: "Poppins", sans-serif;
     color: var(--sw-ink);
     min-height: 100vh;
-    padding-bottom: 260px;
+    padding-bottom: 80px;
     transition: background .22s ease, color .22s ease;
     background:
       radial-gradient(circle at 85% -10%, rgba(255, 216, 189, .95) 0%, rgba(255, 216, 189, 0) 40%),
@@ -68,6 +72,7 @@
   }
 
   body.dark-mode {
+    background-color: var(--sw-bg);
     background:
       radial-gradient(circle at 85% -10%, rgba(252, 128, 25, .22) 0%, rgba(252, 128, 25, 0) 38%),
       radial-gradient(circle at 10% 0%, rgba(245, 144, 71, .14) 0%, rgba(245, 144, 71, 0) 42%),
@@ -840,10 +845,8 @@
       justify-content: space-between;
     }
     .field-grid { grid-template-columns: 1fr; }
-    body { padding-bottom: 300px; }
     .feature-blurb {
-      bottom: 4.8rem;
-      width: calc(100% - 1rem);
+      width: 100%;
       padding: .9rem;
     }
     .feature-blurb h3 { font-size: .9rem; }
