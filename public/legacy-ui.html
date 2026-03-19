@@ -1133,8 +1133,8 @@
   <img id="lightboxImg" src="" alt="">
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script defer src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
 function switchTab(tab) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -1146,28 +1146,41 @@ function switchTab(tab) {
   );
   if (activeBtn) activeBtn.classList.add('active');
   updateFeatureBlurb(tab);
+  
+  // Clear all status messages when switching tabs
+  document.querySelectorAll('.status').forEach(el => {
+    el.textContent = "";
+    el.className = "status";
+  });
 }
 
 async function callApi(url, options = {}) {
+  let res;
   try {
-    const res = await fetch(url, options);
-    if (res.status === 413) throw new Error("File too large (max 20MB).");
-    if (res.status === 404) throw new Error("File or session not found.");
+    res = await fetch(url, options);
+  } catch (fetchErr) {
+    throw new Error("Network error: Could not reach the server.");
+  }
 
-    const contentType = res.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Request failed.");
-      return data;
-    } else {
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt.substring(0, 100) || "Server error.");
-      }
-      return res; // Return raw response for non-JSON OK responses
+  if (res.status === 413) throw new Error("File too large (max 20MB).");
+  if (res.status === 404) throw new Error("Requested resource or session not found.");
+
+  const contentType = res.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    let data;
+    try {
+      data = await res.json();
+    } catch (jsonErr) {
+      throw new Error("Server returned invalid JSON.");
     }
-  } catch (err) {
-    throw new Error(err.message || "Network error.");
+    if (!res.ok) throw new Error(data.error || `Server error (${res.status}).`);
+    return data;
+  } else {
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt.substring(0, 100) || `Server error (${res.status}).`);
+    }
+    return res;
   }
 }
 
@@ -1256,7 +1269,7 @@ dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover
 dropZone.addEventListener("drop", e => {
   e.preventDefault(); dropZone.classList.remove("dragover");
   const f = e.dataTransfer.files[0];
-  if (f && f.type === "application/pdf") {
+  if (f && (f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"))) {
     const dt = new DataTransfer(); dt.items.add(f);
     pdfInput.files = dt.files;
     fileName.textContent = f.name;
@@ -1269,7 +1282,13 @@ async function convertPdf2Img() {
 
   const fmt = document.querySelector('input[name=fmt]:checked').value;
   const dpi = document.getElementById("dpi").value;
-  const pages = (document.getElementById("pages").value || "").trim() || "all";
+  const pagesInput = (document.getElementById("pages").value || "").trim();
+  
+  if (pagesInput && pagesInput.toLowerCase() !== "all" && !/^[\d\s\-,]+$/.test(pagesInput)) {
+    setStatus("status", "Invalid page range format. Use numbers, dashes, or commas (e.g. 1-3,5).", "error");
+    return;
+  }
+  const pages = pagesInput || "all";
   const btn = document.getElementById("convertBtn");
 
   btn.disabled = true;
@@ -1345,15 +1364,23 @@ function renderImgList() {
 
 function renderImgPreview() {
   const g = document.getElementById("imgPreview");
+  
+  // Cleanup old object URLs to prevent leaks
+  g.querySelectorAll('img[data-blob-url]').forEach(img => {
+    URL.revokeObjectURL(img.src);
+  });
+
   if (!imgFiles.length) { g.className = "empty"; g.innerHTML = "Selected images will appear here."; return; }
   g.className = "gallery";
   g.innerHTML = "";
   imgFiles.forEach((f, i) => {
     const img = document.createElement("img");
-    img.src = URL.createObjectURL(f);
+    const url = URL.createObjectURL(f);
+    img.src = url;
+    img.dataset.blobUrl = "true"; // Mark for cleanup
     img.loading = "lazy";
     img.style.animationDelay = `${(i * 0.06).toFixed(2)}s`;
-    img.onclick = () => openLightbox(img.src);
+    img.onclick = () => openLightbox(url);
     g.appendChild(img);
   });
 }
@@ -1725,7 +1752,7 @@ compressDropZone.addEventListener("drop", e => {
   e.preventDefault();
   compressDropZone.classList.remove("dragover");
   const f = e.dataTransfer.files[0];
-  if (f && f.type === "application/pdf") {
+  if (f && (f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"))) {
     const dt = new DataTransfer(); dt.items.add(f);
     compressInput.files = dt.files;
     compressFileName.textContent = f.name;
@@ -1812,7 +1839,9 @@ async function compressPdfFile() {
     const data = await callApi("/compress-pdf", { method: "POST", body: form });
     const hitTargetText = data.achieved_target ? "Target met" : "Best possible for this file";
     const forceText = data.forced_used ? " Forced mode applied." : "";
-    setStatus("compressStatus", `Compression complete. ${hitTargetText}.`, "ok");
+    
+    setStatus("compressStatus", `Compression complete. ${hitTargetText}.${forceText}`, "ok");
+    
     const result = document.getElementById("compressResult");
     result.className = "";
     result.innerHTML = `
@@ -1824,10 +1853,6 @@ async function compressPdfFile() {
     result.style.animation = "none";
     void result.offsetHeight;
     result.style.animation = "rise .4s ease-out";
-
-    if (forceText) {
-      setStatus("compressStatus", `Compression complete. ${hitTargetText}.${forceText}`, "ok");
-    }
 
     const dl = document.getElementById("compressDownload");
     dl.dataset.url = data.pdf;
@@ -1861,7 +1886,8 @@ async function compressImageFile() {
     const data = await callApi("/compress-image", { method: "POST", body: form });
     const hitTargetText = data.achieved_target ? "Target met" : "Best possible for this file";
     const forceText = data.forced_used ? " Forced mode applied." : "";
-    setStatus("imgCompressStatus", `Compression complete. ${hitTargetText}.`, "ok");
+    
+    setStatus("imgCompressStatus", `Compression complete. ${hitTargetText}.${forceText}`, "ok");
 
     const result = document.getElementById("imgCompressResult");
     result.className = "";
@@ -1874,10 +1900,6 @@ async function compressImageFile() {
     result.style.animation = "none";
     void result.offsetHeight;
     result.style.animation = "rise .4s ease-out";
-
-    if (forceText) {
-      setStatus("imgCompressStatus", `Compression complete. ${hitTargetText}.${forceText}`, "ok");
-    }
 
     const dl = document.getElementById("imgCompressDownload");
     dl.dataset.url = data.image;
@@ -2146,17 +2168,20 @@ document.addEventListener("DOMContentLoaded", () => {
   donateConfirm.addEventListener("click", async () => {
     const rupees = donateAmount ? Number(donateAmount.value) : 0;
     if (!Number.isFinite(rupees) || rupees <= 0) {
-      alert("Please enter a valid donation amount.");
+      setStatus("donateStatus", "Please enter a valid donation amount.", "error");
       if (donateAmount) donateAmount.focus();
       return;
     }
 
     const amountPaise = Math.round(rupees * 100);
     if (amountPaise < 100) {
-      alert("Minimum donation is Rs 1.");
+      setStatus("donateStatus", "Minimum donation is Rs 1.", "error");
       if (donateAmount) donateAmount.focus();
       return;
     }
+    
+    // Clear previous errors
+    setStatus("donateStatus", "", "");
 
     const originalText = donateConfirm.textContent;
     donateConfirm.disabled = true;
@@ -2186,10 +2211,10 @@ document.addEventListener("DOMContentLoaded", () => {
         description: payload.description,
         order_id: payload.order_id,
         handler: function () {
-          alert("Thank you for your support!");
+          setStatus("donateStatus", "Thank you for your support!", "ok");
           donateConfirm.disabled = false;
           donateConfirm.textContent = originalText;
-          closeDonateModal();
+          setTimeout(closeDonateModal, 2000);
         },
         modal: {
           ondismiss: function () {
@@ -2203,13 +2228,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const razorpayCheckout = new Razorpay(options);
       razorpayCheckout.on("payment.failed", function (response) {
         const reason = response && response.error ? response.error.description : "Payment failed.";
-        alert(reason);
+        setStatus("donateStatus", reason, "error");
         donateConfirm.disabled = false;
         donateConfirm.textContent = originalText;
       });
       razorpayCheckout.open();
     } catch (err) {
-      alert(err.message || "Unable to open checkout.");
+      setStatus("donateStatus", err.message || "Unable to open checkout.", "error");
       donateConfirm.disabled = false;
       donateConfirm.textContent = originalText;
     }
@@ -2245,6 +2270,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeLightbo
     <h3 id="donateTitle">Support Swift Convert</h3>
     <p>Enter any donation amount in rupees.</p>
     <input type="number" id="donateAmount" class="donate-amount" min="1" step="1" value="101" aria-label="Donation amount in rupees" placeholder="Amount (Rs)">
+    <div id="donateStatus" class="status"></div>
     <div class="donate-actions">
       <button type="button" id="donateConfirm" class="donate-btn">Continue to Pay</button>
       <button type="button" id="donateCancel" class="donate-btn alt">Cancel</button>

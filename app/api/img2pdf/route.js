@@ -47,9 +47,11 @@ export async function POST(request) {
       pdf: `/api/download/${sid}/${encodeURIComponent(result.pdf_name)}`,
     });
   } catch (error) {
+    console.error(`[API/Img2PDF] Error: ${error.message}`, error);
+    const status = error.message.includes("Invalid") || error.message.includes("must be") ? 400 : 500;
     return NextResponse.json(
       { error: `Conversion failed: ${error.message}` },
-      { status: 500 }
+      { status }
     );
   }
 }

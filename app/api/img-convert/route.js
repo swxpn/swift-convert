@@ -60,9 +60,11 @@ export async function POST(request) {
       converted_bytes: result.converted_bytes,
     });
   } catch (error) {
+    console.error(`[API/ImgConvert] Error: ${error.message}`, error);
+    const status = error.message.includes("Supported") || error.message.includes("different") ? 400 : 500;
     return NextResponse.json(
       { error: `Image conversion failed: ${error.message}` },
-      { status: 500 }
+      { status }
     );
   }
 }

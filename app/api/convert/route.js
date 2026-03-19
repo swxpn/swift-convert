@@ -46,9 +46,11 @@ export async function POST(request) {
       zip: `/api/download/${sid}/${encodeURIComponent(result.zip_name)}`,
     });
   } catch (error) {
+    console.error(`[API/Convert] Error: ${error.message}`, error);
+    const status = error.message.includes("Invalid") || error.message.includes("out of bounds") ? 400 : 500;
     return NextResponse.json(
       { error: `Conversion failed: ${error.message}` },
-      { status: 500 }
+      { status }
     );
   }
 }

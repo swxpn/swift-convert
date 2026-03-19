@@ -97,6 +97,8 @@ export async function POST(request) {
       summary: result.summary,
     });
   } catch (error) {
-    return NextResponse.json({ error: `PDF edit failed: ${error.message}` }, { status: 500 });
+    console.error(`[API/EditPDF] Error: ${error.message}`, error);
+    const status = error.message.includes("Invalid") || error.message.includes("out of bounds") || error.message.includes("requires") ? 400 : 500;
+    return NextResponse.json({ error: `PDF edit failed: ${error.message}` }, { status });
   }
 }

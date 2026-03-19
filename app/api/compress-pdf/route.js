@@ -55,9 +55,11 @@ export async function POST(request) {
       forced_used: result.forced_used,
     });
   } catch (error) {
+    console.error(`[API/CompressPDF] Error: ${error.message}`, error);
+    const status = error.message.includes("Invalid") || error.message.includes("between") ? 400 : 500;
     return NextResponse.json(
       { error: `Compression failed: ${error.message}` },
-      { status: 500 }
+      { status }
     );
   }
 }
