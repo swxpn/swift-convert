@@ -2,9 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   outputFileTracingIncludes: {
-    "/api/**/*": ["./scripts/render-pdf.mjs", "./node_modules/@napi-rs/canvas/**/*"],
+    "/api/**/*": ["./scripts/render-pdf.mjs", "./node_modules/@napi-rs/**/*"],
   },
-  serverExternalPackages: ["pdfjs-dist"],
+  serverExternalPackages: ["pdfjs-dist", "@napi-rs/canvas", "sharp"],
   experimental: {
     serverActions: {
       bodySizeLimit: "20mb",
