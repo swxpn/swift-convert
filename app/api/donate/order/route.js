@@ -16,6 +16,8 @@ const RAZORPAY_DONATION_NAME =
 const RAZORPAY_DONATION_DESCRIPTION =
   process.env.RAZORPAY_DONATION_DESCRIPTION || "Support Swift Convert";
 
+export const maxDuration = 60;
+
 export async function POST(request) {
   if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
     return NextResponse.json(
@@ -64,6 +66,7 @@ export async function POST(request) {
 
     const order = await res.json();
     if (!res.ok) {
+      console.error("[Razorpay] Order creation failed:", order);
       const message =
         order?.error?.description || "Unable to create payment order right now.";
       return NextResponse.json({ error: message }, { status: 500 });
@@ -78,6 +81,7 @@ export async function POST(request) {
       description: RAZORPAY_DONATION_DESCRIPTION,
     });
   } catch (error) {
+    console.error(`[Razorpay] Exception: ${error.message}`, error);
     return NextResponse.json(
       { error: `Unable to create payment order right now.` },
       { status: 500 }

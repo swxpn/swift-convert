@@ -8,6 +8,7 @@ import { createSession } from "../../../lib/sessionStore";
 import { writeUploadedFile } from "../../../lib/uploadFile";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 function isTruthy(value) {
   const normalized = String(value || "").trim().toLowerCase();
