@@ -52,6 +52,7 @@ function createCanvasFactory() {
 }
 
 async function renderPages({ inputPath, outDir, pages, dpi }) {
+  const startTime = Date.now();
   const data = await fs.readFile(inputPath);
 
   // Point to the local node_modules assets for fonts and cmaps
@@ -71,6 +72,7 @@ async function renderPages({ inputPath, outDir, pages, dpi }) {
 
   for (const pageIndex of pages) {
     const pageNumber = pageIndex + 1;
+    const pagePerfStart = Date.now();
     const page = await pdf.getPage(pageNumber);
     const viewport = page.getViewport({ scale: dpi / 72 });
 
@@ -84,17 +86,23 @@ async function renderPages({ inputPath, outDir, pages, dpi }) {
       viewport,
       canvasFactory,
     };
+    const renderStart = Date.now();
     await page.render(renderContext).promise;
+    const renderDuration = Date.now() - renderStart;
 
     const outName = `page_${String(pageNumber).padStart(4, "0")}.png`;
     const outPath = path.join(outDir, outName);
     await fs.writeFile(outPath, canvas.toBuffer("image/png"));
 
+    const pageTime = Date.now() - pagePerfStart;
+    console.error(`[render-pdf] Page ${pageNumber}: ${pageTime}ms (render: ${renderDuration}ms)`);
+
     canvasFactory.destroy(canvasAndContext);
     results.push(outName);
   }
 
-  return results;
+  const totalTime = Date.now() - startTime;
+  return { names: results, renderTime: totalTime };
 }
 
 async function main() {
@@ -109,8 +117,8 @@ async function main() {
 
   await ensureDir(outDir);
 
-  const names = await renderPages({ inputPath, outDir, pages, dpi });
-  process.stdout.write(JSON.stringify({ names }));
+  const result = await renderPages({ inputPath, outDir, pages, dpi });
+  process.stdout.write(JSON.stringify({ names: result.names, renderTime: result.renderTime }));
 }
 
 main().catch((error) => {
