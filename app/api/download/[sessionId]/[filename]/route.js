@@ -12,7 +12,7 @@ export async function GET(_request, { params }) {
   const { sessionId, filename } = await params;
   const name = safeFilename(filename);
   if (!name) {
-    return new NextResponse("File not found.", { status: 404 });
+    return new NextResponse("Invalid filename.", { status: 400 });
   }
 
   const meta = getSession(sessionId);
@@ -24,6 +24,15 @@ export async function GET(_request, { params }) {
 
   try {
     const stats = await fs.stat(filePath);
+    
+    if (!stats.isFile()) {
+      return new NextResponse("Path is not a file.", { status: 400 });
+    }
+    
+    if (stats.size === 0) {
+      return new NextResponse("File is empty.", { status: 400 });
+    }
+    
     const stream = Readable.toWeb(createReadStream(filePath));
 
     return new NextResponse(stream, {
@@ -35,7 +44,11 @@ export async function GET(_request, { params }) {
         "Content-Disposition": `attachment; filename="${name}"`,
       },
     });
-  } catch {
-    return new NextResponse("File not found.", { status: 404 });
+  } catch (err) {
+    if (err.code === "ENOENT") {
+      return new NextResponse("File not found in session.", { status: 404 });
+    }
+    console.error(`[Download] Error accessing ${filePath}:`, err.message);
+    return new NextResponse("Failed to retrieve file.", { status: 500 });
   }
 }
