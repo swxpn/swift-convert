@@ -6,7 +6,6 @@
     "build": "next build",
     "postbuild": "node scripts/copyServerChunks.js",
     "start": "next start -p 5001",
-    "test": "vitest run",
     "lint": "next lint"
   },
   "dependencies": {
@@ -27,7 +26,6 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^16.1.7",
-    "vitest": "^4.1.0"
+    "eslint-config-next": "^16.1.7"
   }
 }

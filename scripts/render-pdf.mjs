@@ -53,11 +53,11 @@ function createCanvasFactory() {
 
 async function renderPages({ inputPath, outDir, pages, dpi }) {
   const data = await fs.readFile(inputPath);
-  
+
   // Point to the local node_modules assets for fonts and cmaps
   const pdfjsPath = path.dirname(fileURLToPath(import.meta.url));
   const distPath = path.join(pdfjsPath, "..", "node_modules", "pdfjs-dist");
-  
+
   const loadingTask = getDocument({
     data: new Uint8Array(data),
     standardFontDataUrl: path.join(distPath, "standard_fonts") + path.sep,
