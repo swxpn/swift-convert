@@ -84,16 +84,23 @@ export default function HomePage() {
         <header className="navbar" suppressHydrationWarning>
           <div className="container">
             <div className="navbar-content">
-              <div className="logo">
-                <Image
-                  src="/favicon.svg"
-                  alt="Swift Convert Logo"
-                  width={32}
-                  height={32}
-                  className="logo-icon"
-                />
-                <span className="logo-text">Swift Convert</span>
-              </div>
+            <button
+              className="logo"
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: 'smooth', left: 0 });
+              }}
+              aria-label="Scroll to top"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              <Image
+                src="/favicon.svg"
+                alt="Swift Convert Logo"
+                width={32}
+                height={32}
+                className="logo-icon"
+              />
+              <span className="logo-text">Swift Convert</span>
+            </button>
               <nav className="nav-links">
                 <Link href="/docs/pdf-conversion">Guides</Link>
                 <Link href="/docs/formats">Formats</Link>
