@@ -16,6 +16,7 @@ export async function POST(request) {
     const pdf = form.get("pdf");
     const format = String(form.get("format") || "PNG").toUpperCase();
     const dpi = Number(form.get("dpi") || 150);
+    const webpQuality = Number(form.get("webp_quality") || 80);
     const pages = String(form.get("pages") || "all");
 
     if (!pdf || typeof pdf === "string" || !pdf.name) {
@@ -32,6 +33,7 @@ export async function POST(request) {
       format,
       dpi,
       pages,
+      webp_quality: webpQuality,
     });
 
     const sessionId = createSession(sessionDir, {

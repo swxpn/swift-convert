@@ -94,6 +94,23 @@ export default function Converter() {
       return;
     }
 
+    // Validate DPI range
+    if (![72, 150, 300].includes(Number(settings.dpi))) {
+      setError('DPI must be 72, 150, or 300');
+      return;
+    }
+
+    // Validate quality ranges
+    if ((activeTab === 'imgcompress' || activeTab === 'pdfcompress') && (settings.quality < 10 || settings.quality > 90)) {
+      setError('Compression quality must be between 10% and 90%');
+      return;
+    }
+
+    if (settings.format === 'WEBP' && (settings.webpQuality < 50 || settings.webpQuality > 100)) {
+      setError('WebP quality must be between 50% and 100%');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setResult(null);
@@ -106,6 +123,9 @@ export default function Converter() {
         formData.append('format', settings.format);
         formData.append('dpi', settings.dpi);
         formData.append('pages', 'all');
+        if (settings.format === 'WEBP') {
+          formData.append('webp_quality', settings.webpQuality);
+        }
       } else if (activeTab === 'img2pdf') {
         formData.append('images', file);
       } else if (activeTab === 'imgcompress') {
@@ -118,7 +138,9 @@ export default function Converter() {
         formData.append('image', file);
         formData.append('target_format', settings.format);
         formData.append('dpi', settings.dpi);
-        formData.append('webp_quality', settings.webpQuality);
+        if (settings.format === 'WEBP') {
+          formData.append('webp_quality', settings.webpQuality);
+        }
       }
 
       const endpoints = {
@@ -137,15 +159,26 @@ export default function Converter() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Conversion failed: ${response.statusText}`);
+        let errorMessage = `Conversion failed: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // Response is not JSON, use status text
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      if (!data) {
+        throw new Error('Empty response from server');
+      }
       setResult(data);
       setFile(null);
     } catch (err) {
-      setError(err.message || 'Conversion failed. Please try again.');
+      const errorMsg = err.message || 'Conversion failed. Please try again.';
+      setError(errorMsg);
+      console.error('Conversion error:', err);
     } finally {
       setLoading(false);
     }
@@ -154,15 +187,33 @@ export default function Converter() {
   const downloadResult = () => {
     if (!result) return;
 
-    let downloadUrl = result.zip || result.pdf || result.image || result.images?.[0];
+    // Determine download URL based on response structure
+    let downloadUrl = null;
+    let fileName = 'converted-file';
+
+    if (result.zip) {
+      downloadUrl = result.zip;
+      fileName = 'converted-images.zip';
+    } else if (result.pdf) {
+      downloadUrl = result.pdf;
+      fileName = 'converted.pdf';
+    } else if (result.image) {
+      downloadUrl = result.image;
+      fileName = 'converted-image';
+    } else if (Array.isArray(result.images) && result.images.length > 0) {
+      downloadUrl = result.images[0];
+      fileName = 'converted-image';
+    }
 
     if (downloadUrl) {
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = 'converted-file';
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+    } else {
+      setError('No download URL available in response');
     }
   };
 
@@ -240,17 +291,33 @@ export default function Converter() {
                       ))}
                     </div>
                   </div>
+                  {settings.format === 'WEBP' && (
+                    <div className="setting-group">
+                      <label htmlFor="pdf-webp-quality">WebP Quality: {settings.webpQuality}%</label>
+                      <input
+                        id="pdf-webp-quality"
+                        type="range"
+                        min="50"
+                        max="100"
+                        value={settings.webpQuality}
+                        onChange={(e) => setSettings({ ...settings, webpQuality: Number(e.target.value) })}
+                        className="slider"
+                      />
+                    </div>
+                  )}
                   <div className="setting-group">
-                    <label htmlFor="dpi">Resolution (DPI): {settings.dpi}</label>
-                    <input
-                      id="dpi"
-                      type="range"
-                      min="72"
-                      max="300"
-                      value={settings.dpi}
-                      onChange={(e) => setSettings({ ...settings, dpi: Number(e.target.value) })}
-                      className="slider"
-                    />
+                    <label>Resolution (DPI)</label>
+                    <div className="button-group">
+                      {[72, 150, 300].map((dpi) => (
+                        <button
+                          key={dpi}
+                          onClick={() => setSettings({ ...settings, dpi })}
+                          className={`btn-dpi ${settings.dpi === dpi ? 'active' : ''}`}
+                        >
+                          {dpi}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </>
               )}
@@ -303,16 +370,18 @@ export default function Converter() {
                     </div>
                   )}
                   <div className="setting-group">
-                    <label htmlFor="img-dpi">Resolution (DPI): {settings.dpi}</label>
-                    <input
-                      id="img-dpi"
-                      type="range"
-                      min="72"
-                      max="300"
-                      value={settings.dpi}
-                      onChange={(e) => setSettings({ ...settings, dpi: Number(e.target.value) })}
-                      className="slider"
-                    />
+                    <label>Resolution (DPI)</label>
+                    <div className="button-group">
+                      {[72, 150, 300].map((dpi) => (
+                        <button
+                          key={dpi}
+                          onClick={() => setSettings({ ...settings, dpi })}
+                          className={`btn-dpi ${settings.dpi === dpi ? 'active' : ''}`}
+                        >
+                          {dpi}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </>
               )}

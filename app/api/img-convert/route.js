@@ -16,6 +16,7 @@ export async function POST(request) {
     const image = form.get("image");
     const targetFormat = String(form.get("target_format") || "JPEG").toUpperCase();
     const dpi = Number(form.get("dpi") || 150);
+    const webpQuality = Number(form.get("webp_quality") || 80);
 
     if (!image || typeof image === "string" || !image.name) {
       return NextResponse.json({ error: "No image file provided." }, { status: 400 });
@@ -47,6 +48,7 @@ export async function POST(request) {
       target_format: normalizedTarget,
       original_filename: image.name,
       dpi: dpi,
+      webp_quality: webpQuality,
     });
 
     const sessionId = createSession(sessionDir, {
