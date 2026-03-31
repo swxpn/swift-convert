@@ -2,6 +2,7 @@ import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ReloadHandler } from "./components/ReloadHandler";
+import { PageTransitionHandler } from "./components/PageTransitionHandler";
 
 const assetVersion = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev";
 
@@ -138,6 +139,7 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <ReloadHandler />
+        <PageTransitionHandler />
         {children}
         <Analytics />
         <SpeedInsights />
