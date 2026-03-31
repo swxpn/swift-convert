@@ -57,23 +57,23 @@ export default function FAQ() {
           <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>We may offer optional premium plans later for power users needing higher limits, priority processing, or advanced features. However, the core service will always remain free with no restrictions.</p>
 
           <h3 style={{ fontSize: '1.1rem', marginTop: '20px', marginBottom: '10px', color: 'var(--ink)' }}>How long can I download my converted files?</h3>
-          <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>Converted files are available for download for 1 hour if you don't have an account. With a free account, you can re-download converted files for up to 7 days. Download immediately for best reliability.</p>
+          <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>Converted files are available for download for 1 hour if you don&apos;t have an account. With a free account, you can re-download converted files for up to 7 days. Download immediately for best reliability.</p>
         </div>
 
         <div style={{ marginBottom: '30px' }}>
           <h2 style={{ fontSize: '1.3rem', color: 'var(--ink)', borderBottom: '2px solid var(--primary)', paddingBottom: '10px', marginBottom: '15px' }}>Legal & Security</h2>
           
           <h3 style={{ fontSize: '1.1rem', marginTop: '20px', marginBottom: '10px', color: 'var(--ink)' }}>Can I use converted files for commercial purposes?</h3>
-          <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>Yes, absolutely. You have full rights to use converted files for any purpose—personal projects, commercial products, resale, or redistribution. No licensing fees, restrictions, or attribution required. The file remains yours to use however you wish.</p>
+          <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>Yes, absolutely. You have full rights to use converted files for any purpose&mdash;personal projects, commercial products, resale, or redistribution. No licensing fees, restrictions, or attribution required. The file remains yours to use however you wish.</p>
 
           <h3 style={{ fontSize: '1.1rem', marginTop: '20px', marginBottom: '10px', color: 'var(--ink)' }}>Is my data secure? What security measures are in place?</h3>
-          <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>Yes, your data is secure. All connections use HTTPS encryption. Files are processed on secure, isolated servers and automatically deleted within 1 hour. We don't store files permanently, back them up, or grant employees access to them. We never analyze, scan, or use your content for any purpose.</p>
+          <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>Yes, your data is secure. All connections use HTTPS encryption. Files are processed on secure, isolated servers and automatically deleted within 1 hour. We don&apos;t store files permanently, back them up, or grant employees access to them. We never analyze, scan, or use your content for any purpose.</p>
 
           <h3 style={{ fontSize: '1.1rem', marginTop: '20px', marginBottom: '10px', color: 'var(--ink)' }}>GDPR and privacy compliance?</h3>
-          <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>Swift Convert respects privacy rights and operates in compliance with GDPR and other major privacy regulations. We collect minimal data, never track users across websites, and don't use cookies for advertising. Read our full privacy policy for details.</p>
+          <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>Swift Convert respects privacy rights and operates in compliance with GDPR and other major privacy regulations. We collect minimal data, never track users across websites, and don&apos;t use cookies for advertising. Read our full privacy policy for details.</p>
 
           <h3 style={{ fontSize: '1.1rem', marginTop: '20px', marginBottom: '10px', color: 'var(--ink)' }}>What about malware or virus scanning?</h3>
-          <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>We perform basic security checks but do not provide virus scanning. If you're concerned about file safety, scan files with your antivirus before uploading. We automatically delete all files after 1 hour regardless of origin.</p>
+          <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>We perform basic security checks but do not provide virus scanning. If you&apos;re concerned about file safety, scan files with your antivirus before uploading. We automatically delete all files after 1 hour regardless of origin.</p>
 
           <h3 style={{ fontSize: '1.1rem', marginTop: '20px', marginBottom: '10px', color: 'var(--ink)' }}>Is the app open source?</h3>
           <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>The core conversion library is available open source on GitHub for transparency. The web interface and infrastructure are proprietary. Check our GitHub for contribution opportunities.</p>
