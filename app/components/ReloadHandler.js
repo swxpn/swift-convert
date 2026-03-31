@@ -37,8 +37,6 @@ export function ReloadHandler() {
     <div 
       className="reload-overlay-static" 
       style={{ display: 'none' }}
-    >
-      <div className="reload-spinner"></div>
-    </div>
+    />
   );
 }
