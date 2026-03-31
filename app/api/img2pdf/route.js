@@ -13,7 +13,16 @@ export const maxDuration = 60;
 export async function POST(request) {
   try {
     const form = await request.formData();
-    const files = form.getAll("images").filter((f) => typeof f !== "string");
+    
+    // Support both 'images' (multiple) and 'image' (single) field names
+    let files = form.getAll("images").filter((f) => typeof f !== "string");
+    if (!files.length) {
+      const singleImage = form.get("image");
+      if (singleImage && typeof singleImage !== "string") {
+        files = [singleImage];
+      }
+    }
+    
     const pageSize = String(form.get("page_size") || "A4").toUpperCase();
     const orientation = String(form.get("orientation") || "portrait").toLowerCase();
 

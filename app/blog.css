@@ -1,0 +1,388 @@
+/* Blog Styles */
+.blog-main {
+  width: 100%;
+}
+
+.blog-header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  padding: 60px 0;
+  text-align: center;
+}
+
+.blog-header h1 {
+  font-size: 2.5rem;
+  margin: 0 0 10px 0;
+}
+
+.blog-header p {
+  font-size: 1.1rem;
+  margin: 0;
+  opacity: 0.95;
+}
+
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 30px;
+  padding: 60px 0;
+}
+
+.blog-card {
+  background: var(--card);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+}
+
+.blog-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 32px var(--shadow);
+  border-color: var(--primary);
+}
+
+.blog-category {
+  display: inline-block;
+  background: var(--primary);
+  color: white;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin: 15px 15px 0 15px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.blog-card h2 {
+  margin: 15px;
+  font-size: 1.3rem;
+  color: var(--ink);
+  line-height: 1.4;
+  flex: 1;
+}
+
+.blog-card h2 a {
+  color: var(--ink);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.blog-card h2 a:hover {
+  color: var(--primary);
+}
+
+.blog-excerpt {
+  margin: 0 15px;
+  color: var(--muted);
+  line-height: 1.6;
+  flex: 1;
+}
+
+.blog-meta {
+  display: flex;
+  gap: 15px;
+  padding: 0 15px;
+  margin: 15px 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.blog-date,
+.blog-read-time {
+  display: flex;
+  align-items: center;
+}
+
+.read-more {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+  margin: 15px;
+  display: inline-block;
+  transition: all 0.2s;
+}
+
+.read-more:hover {
+  transform: translateX(5px);
+}
+
+/* Blog Article */
+.blog-article {
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+.blog-header-single {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  padding: 60px 0 40px;
+}
+
+.blog-header-single h1 {
+  font-size: 2rem;
+  margin: 20px 0 10px 0;
+  line-height: 1.3;
+}
+
+.blog-header-single .lead {
+  font-size: 1.1rem;
+  opacity: 0.95;
+  line-height: 1.6;
+  margin: 15px 0 0 0;
+}
+
+.blog-meta-top {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+}
+
+.blog-meta-top .category {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 12px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.blog-content {
+  padding: 60px 0;
+  background: var(--bg);
+}
+
+.blog-content h2 {
+  font-size: 1.8rem;
+  margin: 40px 0 20px 0;
+  color: var(--ink);
+  border-bottom: 2px solid var(--line);
+  padding-bottom: 10px;
+}
+
+.blog-content h3 {
+  font-size: 1.3rem;
+  margin: 30px 0 15px 0;
+  color: var(--ink);
+}
+
+.blog-content p {
+  color: var(--muted);
+  line-height: 1.8;
+  margin: 0 0 15px 0;
+  font-size: 1rem;
+}
+
+.blog-content ul,
+.blog-content ol {
+  margin: 15px 0;
+  padding-left: 30px;
+}
+
+.blog-content li {
+  margin-bottom: 10px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.comparison-box {
+  background: var(--card);
+  border-left: 4px solid var(--primary);
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.comparison-box strong {
+  display: block;
+  margin-bottom: 15px;
+}
+
+.comparison-box ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.blog-cta {
+  background: var(--card);
+  padding: 40px;
+  border-radius: 12px;
+  border: 2px solid var(--primary);
+  text-align: center;
+  margin: 60px 0;
+}
+
+.blog-cta h3 {
+  margin-top: 0;
+}
+
+.blog-cta .btn {
+  margin-top: 15px;
+}
+
+/* Newsletter */
+.newsletter {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  padding: 60px 0;
+  text-align: center;
+}
+
+.newsletter h2 {
+  margin: 0 0 10px 0;
+  font-size: 2rem;
+}
+
+.newsletter p {
+  margin: 0 0 30px 0;
+  font-size: 1.1rem;
+  opacity: 0.95;
+}
+
+.newsletter-form {
+  display: flex;
+  gap: 10px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.newsletter-form input {
+  flex: 1;
+  padding: 12px 15px;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.newsletter-form button {
+  padding: 12px 25px;
+  background: white;
+  color: var(--primary);
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.newsletter-form button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Legal Pages */
+.legal-page {
+  background: var(--bg);
+  min-height: 100vh;
+  padding: 60px 0;
+}
+
+.legal-page .container {
+  max-width: 800px;
+  background: var(--card);
+  padding: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.legal-page h1 {
+  font-size: 2.5rem;
+  margin: 0 0 10px 0;
+  color: var(--ink);
+}
+
+.last-updated {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0 0 30px 0;
+}
+
+.legal-page h2 {
+  font-size: 1.5rem;
+  margin: 40px 0 20px 0;
+  color: var(--ink);
+  border-bottom: 2px solid var(--line);
+  padding-bottom: 10px;
+}
+
+.legal-page h3 {
+  font-size: 1.15rem;
+  margin: 25px 0 15px 0;
+  color: var(--ink);
+}
+
+.legal-page p {
+  color: var(--muted);
+  line-height: 1.8;
+  margin: 0 0 15px 0;
+}
+
+.legal-page ul {
+  margin: 15px 0;
+  padding-left: 30px;
+}
+
+.legal-page li {
+  margin-bottom: 10px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.legal-page code {
+  background: var(--bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--primary);
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.legal-note {
+  background: var(--bg);
+  border-left: 4px solid var(--primary);
+  padding: 15px;
+  border-radius: 4px;
+  margin: 40px 0;
+  color: var(--muted);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .blog-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .blog-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 40px 0;
+  }
+
+  .blog-header-single {
+    padding: 40px 0 30px;
+  }
+
+  .blog-header-single h1 {
+    font-size: 1.5rem;
+  }
+
+  .blog-content {
+    padding: 40px 0;
+  }
+
+  .newsletter-form {
+    flex-direction: column;
+  }
+
+  .newsletter-form input,
+  .newsletter-form button {
+    width: 100%;
+  }
+
+  .legal-page .container {
+    padding: 20px;
+  }
+}

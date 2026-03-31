@@ -15,23 +15,24 @@ export async function POST(request) {
     const form = await request.formData();
     const image = form.get("image");
     const targetFormat = String(form.get("target_format") || "JPEG").toUpperCase();
+    const dpi = Number(form.get("dpi") || 150);
 
     if (!image || typeof image === "string" || !image.name) {
       return NextResponse.json({ error: "No image file provided." }, { status: 400 });
     }
 
     const normalizedTarget = targetFormat === "JPG" ? "JPEG" : targetFormat;
-    if (!["PNG", "JPEG"].includes(normalizedTarget)) {
+    if (!["PNG", "JPEG", "WEBP", "TIFF"].includes(normalizedTarget)) {
       return NextResponse.json(
-        { error: "Target format must be PNG or JPEG." },
+        { error: "Target format must be PNG, JPEG, WEBP, or TIFF." },
         { status: 400 }
       );
     }
 
     const ext = path.extname(image.name || "").toLowerCase();
-    if (![".png", ".jpg", ".jpeg"].includes(ext)) {
+    if (![".png", ".jpg", ".jpeg", ".webp", ".tiff", ".tif"].includes(ext)) {
       return NextResponse.json(
-        { error: "Only PNG and JPEG files are supported." },
+        { error: "Input file must be PNG, JPEG, WEBP, or TIFF format." },
         { status: 400 }
       );
     }
@@ -45,6 +46,7 @@ export async function POST(request) {
       tmp_dir: sessionDir,
       target_format: normalizedTarget,
       original_filename: image.name,
+      dpi: dpi,
     });
 
     const sessionId = createSession(sessionDir, {
