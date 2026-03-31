@@ -4,7 +4,7 @@ import { Readable } from "node:stream";
 import { NextResponse } from "next/server";
 
 import { getSession } from "../../../../../lib/sessionStore";
-import { contentTypeFor, safeFilename } from "../../../../../lib/httpFile";
+import { contentTypeFor, safeFilename, encodeFilename } from "../../../../../lib/httpFile";
 
 export const runtime = "nodejs";
 
@@ -20,21 +20,25 @@ export async function GET(_request, { params }) {
     return new NextResponse("Session not found or expired.", { status: 404 });
   }
 
-  const filePath = path.join(meta.dir, name);
-
   try {
     const stats = await fs.stat(filePath);
     const stream = Readable.toWeb(createReadStream(filePath));
     const type = contentTypeFor(name);
     const asAttachment = name.endsWith(".zip") || name.endsWith(".pdf");
 
+    const encodedName = encodeFilename(name);
+    const contentDisposition = encodedName.includes("'")
+      ? `attachment; filename*=${encodedName}; filename="${name.substring(0, 20)}"`
+      : `attachment; filename="${name}"`;
+
     const headers = {
       "Content-Type": type,
       "Content-Length": String(stats.size),
-      "Cache-Control": "no-store",
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      "Accept-Ranges": "bytes",
     };
     if (asAttachment) {
-      headers["Content-Disposition"] = `attachment; filename="${name}"`;
+      headers["Content-Disposition"] = contentDisposition;
     }
 
     return new NextResponse(stream, { status: 200, headers });

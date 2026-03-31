@@ -187,31 +187,55 @@ export default function Converter() {
   const downloadResult = () => {
     if (!result) return;
 
-    // Determine download URL based on response structure
+    // Determine download URL and filename from API response
     let downloadUrl = null;
-    let fileName = 'converted-file';
+    let fileName = null;
 
+    // Check for single file responses with URL paths
     if (result.zip) {
       downloadUrl = result.zip;
-      fileName = 'converted-images.zip';
+      // Extract filename from URL path (format: /api/download/sessionId/filename)
+      const zipMatch = result.zip.match(/\/([^/]+)$/);
+      fileName = zipMatch ? decodeURIComponent(zipMatch[1]) : 'converted-images.zip';
     } else if (result.pdf) {
       downloadUrl = result.pdf;
-      fileName = 'converted.pdf';
+      const pdfMatch = result.pdf.match(/\/([^/]+)$/);
+      fileName = pdfMatch ? decodeURIComponent(pdfMatch[1]) : 'converted.pdf';
     } else if (result.image) {
       downloadUrl = result.image;
-      fileName = 'converted-image';
+      const imgMatch = result.image.match(/\/([^/]+)$/);
+      fileName = imgMatch ? decodeURIComponent(imgMatch[1]) : 'converted-image';
     } else if (Array.isArray(result.images) && result.images.length > 0) {
       downloadUrl = result.images[0];
-      fileName = 'converted-image';
+      const imgMatch = result.images[0].match(/\/([^/]+)$/);
+      fileName = imgMatch ? decodeURIComponent(imgMatch[1]) : 'converted-image';
     }
 
-    if (downloadUrl) {
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+    if (downloadUrl && fileName) {
+      try {
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = fileName;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        
+        // Add error handler for download failures
+        a.onerror = () => {
+          setError(`Download failed: Could not download ${fileName}`);
+          document.body.removeChild(a);
+        };
+        
+        a.click();
+        
+        // Clean up after a delay to allow download to start
+        setTimeout(() => {
+          if (document.body.contains(a)) {
+            document.body.removeChild(a);
+          }
+        }, 100);
+      } catch (err) {
+        setError(`Download error: ${err.message}`);
+      }
     } else {
       setError('No download URL available in response');
     }

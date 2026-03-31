@@ -4,7 +4,7 @@ import { Readable } from "node:stream";
 import { NextResponse } from "next/server";
 
 import { getSession } from "../../../../../lib/sessionStore";
-import { contentTypeFor, safeFilename } from "../../../../../lib/httpFile";
+import { contentTypeFor, safeFilename, encodeFilename } from "../../../../../lib/httpFile";
 
 export const runtime = "nodejs";
 
@@ -35,13 +35,20 @@ export async function GET(_request, { params }) {
     
     const stream = Readable.toWeb(createReadStream(filePath));
 
+    // RFC 5987 encoded filename for proper character support
+    const encodedName = encodeFilename(name);
+    const contentDisposition = encodedName.includes("'")
+      ? `attachment; filename*=${encodedName}; filename="${name.substring(0, 20)}"`
+      : `attachment; filename="${name}"`;
+
     return new NextResponse(stream, {
       status: 200,
       headers: {
         "Content-Type": contentTypeFor(name),
         "Content-Length": String(stats.size),
-        "Cache-Control": "no-store",
-        "Content-Disposition": `attachment; filename="${name}"`,
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Content-Disposition": contentDisposition,
+        "Accept-Ranges": "bytes",
       },
     });
   } catch (err) {
