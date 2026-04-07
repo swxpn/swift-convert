@@ -52,8 +52,14 @@ export default function Donate() {
           currency: data.currency,
           name: 'Swift Convert',
           description: `Support Swift Convert - ₹${donationAmount}`,
+          modal: {
+            ondismiss: function() {
+              setIsProcessing(false);
+            }
+          },
           handler: function (response) {
             setError('');
+            setIsProcessing(false);
             alert('Thank you for your donation! 🙏 Your support helps us improve server performance and add new features.');
             setAmount(101);
             setCustomAmount('');
@@ -73,6 +79,7 @@ export default function Donate() {
 
         const rzp = new window.Razorpay(options);
         rzp.on('payment.failed', function (response) {
+          setIsProcessing(false);
           setError(`Payment failed (${response.error.code}): ${response.error.description}`);
         });
         rzp.open();
