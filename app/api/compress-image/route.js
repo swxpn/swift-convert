@@ -10,6 +10,9 @@ import { writeUploadedFile } from "../../../lib/uploadFile";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+// File size limits optimized for Vercel free tier (15MB max for compression)
+const MAX_FILE_SIZE = 15 * 1024 * 1024;
+
 function isTruthy(value) {
   const normalized = String(value || "").trim().toLowerCase();
   return ["1", "true", "yes", "on"].includes(normalized);
@@ -24,6 +27,14 @@ export async function POST(request) {
 
     if (!image || typeof image === "string" || !image.name) {
       return NextResponse.json({ error: "No image file provided." }, { status: 400 });
+    }
+
+    // Validate file size for Vercel constraints
+    if (image.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: `File too large. Maximum size is 15MB. Your file is ${(image.size / (1024 * 1024)).toFixed(2)}MB.` },
+        { status: 413 }
+      );
     }
 
     const ext = path.extname(image.name || "").toLowerCase() || ".img";

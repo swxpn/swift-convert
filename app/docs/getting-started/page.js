@@ -36,6 +36,10 @@ export default function GettingStarted() {
           <p style={{ fontSize: '0.9rem', margin: '10px 0 0 0' }}>Convert multiple files at once</p>
         </div>
         <div style={{ background: 'var(--card)', border: '1px solid var(--line)', padding: '15px', borderRadius: '8px' }}>
+          <h4 style={{ marginTop: 0 }}>✏️ Edit PDFs</h4>
+          <p style={{ fontSize: '0.9rem', margin: '10px 0 0 0' }}>Rearrange, rotate & merge pages</p>
+        </div>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--line)', padding: '15px', borderRadius: '8px' }}>
           <h4 style={{ marginTop: 0 }}>📊 Full Format Support</h4>
           <p style={{ fontSize: '0.9rem', margin: '10px 0 0 0' }}>PDF, JPG, PNG, WebP, TIFF</p>
         </div>
@@ -43,7 +47,7 @@ export default function GettingStarted() {
 
       <h2>Limits & Support</h2>
       <p>
-        <strong>File Size:</strong> Up to 100MB per file, 500MB total for batch processing<br/>
+        <strong>File Size:</strong> 15-30MB depending on operation type (see size warnings in converter)<br/>
         <strong>Speed:</strong> Most conversions complete in under 2 seconds<br/>
         <strong>Commercial Use:</strong> Yes, converted files can be used commercially with no restrictions
       </p>

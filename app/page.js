@@ -105,6 +105,7 @@ export default function HomePage() {
                 <Link href="/docs/pdf-conversion">Guides</Link>
                 <Link href="/docs/formats">Formats</Link>
                 <Link href="/blog">Blog</Link>
+                <Link href="/donate" style={{ color: 'var(--primary)', fontWeight: '600' }}>💝 Support</Link>
               </nav>
             </div>
           </div>
@@ -259,6 +260,34 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Support Us Section */}
+        <section className="support-section">
+          <div className="container">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ margin: '0 0 15px 0' }}>Help Us Keep Swift Convert Free 💝</h2>
+                <p style={{ fontSize: '1.05rem', lineHeight: '1.8', color: 'var(--muted)', margin: '0 0 20px 0' }}>
+                  Swift Convert is and always will be completely free. But keeping it fast, secure, and feature-rich requires resources. Your donations directly fund:
+                </p>
+                <ul style={{ color: 'var(--muted)', lineHeight: '1.8', fontSize: '0.95rem', paddingLeft: '20px', margin: 0 }}>
+                  <li>⚡ Better servers for faster conversions</li>
+                  <li>✨ New features and improvements</li>
+                  <li>🛡️ Enhanced security & reliability</li>
+                  <li>📞 Better support & documentation</li>
+                </ul>
+              </div>
+              <div style={{ background: 'var(--surface-soft)', borderRadius: '12px', padding: '30px', border: '1px solid var(--line)', textAlign: 'center' }}>
+                <p style={{ fontSize: '2.5rem', margin: '0 0 20px 0' }}>💪</p>
+                <h3 style={{ margin: '0 0 15px 0', color: 'var(--ink)', fontSize: '1.3rem' }}>Make a Difference</h3>
+                <p style={{ color: 'var(--muted)', fontSize: '0.9rem', margin: '0 0 25px 0', lineHeight: '1.6' }}>Every donation, no matter the size, helps improve the service for millions of users worldwide.</p>
+                <Link href="/donate" className="btn btn-primary" style={{ textDecoration: 'none' }}>
+                  View Donation Options →
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* CTA Section */}
         <section className="cta-section">
           <div className="container">
@@ -287,6 +316,7 @@ export default function HomePage() {
             </div>
             <div className="footer-section">
               <h4>Company</h4>
+              <Link href="/donate">💝 Support Us</Link>
               <Link href="/privacy-policy">Privacy Policy</Link>
               <Link href="/terms-of-service">Terms of Service</Link>
               <Link href="/contact">Contact</Link>

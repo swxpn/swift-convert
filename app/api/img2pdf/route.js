@@ -10,6 +10,9 @@ import { writeUploadedFile } from "../../../lib/uploadFile";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+// File size limits optimized for Vercel free tier (20MB max for image conversion)
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
+
 export async function POST(request) {
   try {
     const form = await request.formData();
@@ -28,6 +31,25 @@ export async function POST(request) {
 
     if (!files.length) {
       return NextResponse.json({ error: "No image files provided." }, { status: 400 });
+    }
+
+    // Validate file sizes for Vercel constraints
+    let totalSize = 0;
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE) {
+        return NextResponse.json(
+          { error: `File "${file.name}" is too large. Maximum size per file is 20MB.` },
+          { status: 413 }
+        );
+      }
+      totalSize += file.size;
+    }
+
+    if (totalSize > 50 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: `Total file size exceeds 50MB. Current total: ${(totalSize / (1024 * 1024)).toFixed(2)}MB.` },
+        { status: 413 }
+      );
     }
 
     const sessionDir = await fs.mkdtemp(path.join(os.tmpdir(), "img2pdf_"));

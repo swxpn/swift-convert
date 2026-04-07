@@ -15,7 +15,7 @@ export default function Troubleshooting() {
       <h2>Upload Issues</h2>
       <h3>File won&apos;t upload</h3>
       <ul>
-        <li>Check file size (max 100MB per file)</li>
+        <li>Check file size (limits vary: PDF→Image 30MB, Image→PDF 20MB, Compress 15MB, Edit PDF 30MB)</li>
         <li>Verify file format is supported</li>
         <li>Try refreshing the page</li>
         <li>Check your internet connection</li>
@@ -96,6 +96,44 @@ export default function Troubleshooting() {
         <li>Compare with original visually</li>
         <li>Try PNG format instead</li>
         <li>Consider WebP for better quality-size ratio</li>
+      </ul>
+
+      <h2>PDF Editing Issues</h2>
+      <h3>Page previews not showing</h3>
+      <ul>
+        <li>Wait for preview generation to complete (⏳ indicator)</li>
+        <li>Check PDF isn&apos;t corrupted or password-protected</li>
+        <li>Try a different PDF file</li>
+        <li>Refresh page and try again</li>
+      </ul>
+
+      <h3>Can&apos;t drag pages to reorder</h3>
+      <ul>
+        <li>Make sure you&apos;re dragging within the thumbnail grid</li>
+        <li>Try a different browser (some browsers have better drag support)</li>
+        <li>Check that thumbnails are fully loaded before dragging</li>
+        <li>Use rotation and remove buttons if drag-and-drop isn&apos;t working</li>
+      </ul>
+
+      <h3>Pages not rotating correctly</h3>
+      <ul>
+        <li>Click the 🔄 button to rotate 90° each time</li>
+        <li>You can rotate multiple times (0°, 90°, 180°, 270°)</li>
+        <li>Refresh page if rotation doesn&apos;t appear</li>
+      </ul>
+
+      <h3>Merged PDF pages are in wrong order</h3>
+      <ul>
+        <li>Check upload order - files merge in the order selected</li>
+        <li>Remove all files and upload again in correct order</li>
+        <li>Select PDFs one at a time rather than batch selecting</li>
+      </ul>
+
+      <h3>Edited PDF looks wrong after conversion</h3>
+      <ul>
+        <li>Check rotation settings are correct for each page</li>
+        <li>Verify page order in thumbnail view before converting</li>
+        <li>For complex edits, convert to images first (PDF→Image), then create new PDF</li>
       </ul>
 
       <h2>Browser Compatibility</h2>

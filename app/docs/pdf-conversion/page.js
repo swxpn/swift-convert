@@ -30,6 +30,16 @@ export default function PdfConversion() {
         <p style={{ margin: '10px 0 0 0', fontSize: '0.9rem', color: 'var(--muted)' }}><strong>Popular conversions:</strong> PNG→JPG (smaller size), JPG→PNG (lossless), Any→WebP (web optimized)</p>
       </div>
 
+      <h2>Edit PDFs</h2>
+      <div style={{ background: 'var(--surface-soft)', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
+        <p><strong>Two modes available:</strong></p>
+        <ul style={{ margin: '10px 0 0 0' }}>
+          <li><strong>Merge PDFs:</strong> Combine multiple PDF files into one. Upload 2+ PDFs, and they&apos;ll be merged in order.</li>
+          <li><strong>Rearrange & Rotate:</strong> Edit a single PDF by rearranging pages, rotating pages, and removing unwanted pages with visual thumbnails.</li>
+        </ul>
+        <p style={{ margin: '10px 0 0 0', fontSize: '0.9rem', color: 'var(--muted)' }}><strong>Features:</strong> Drag-and-drop page reordering, 90° rotation per page, page removal, visual page previews</p>
+      </div>
+
       <h2>Compression Levels</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px', marginBottom: '20px' }}>
         <div style={{ background: 'var(--card)', border: '1px solid var(--line)', padding: '12px', borderRadius: '8px' }}>

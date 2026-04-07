@@ -19,7 +19,7 @@ export default function FAQ() {
           <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>Your files are protected using HTTPS encryption during transfer. Files are processed on secure servers and automatically deleted within 1 hour of upload. We never permanently store, backup, analyze, or access your files. We only see file metadata for quality assurance. Your privacy is our top priority.</p>
 
           <h3 style={{ fontSize: '1.1rem', marginTop: '20px', marginBottom: '10px', color: 'var(--ink)' }}>What are the file size and upload limits?</h3>
-          <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>Individual files can be up to 100MB. For batch processing, you can upload up to 50 files with a total batch size not exceeding 500MB. If you need higher limits for enterprise use, contact our support team at support@swift-convert.com for custom plans.</p>
+          <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>File size limits vary by conversion type: PDF→Image (30MB), Image→PDF (20MB), Compress Image/PDF (15MB), Convert Format (20MB), Edit PDF (30MB per file). These optimized limits ensure fast, reliable processing on our infrastructure. For batch processing, you can upload multiple files subject to the per-file limits.</p>
 
           <h3 style={{ fontSize: '1.1rem', marginTop: '20px', marginBottom: '10px', color: 'var(--ink)' }}>Do I need to create an account?</h3>
           <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>No. You can start converting files immediately without registration. Creating a free account is optional and provides benefits like saving your conversion history, storing conversion presets, getting faster support, and accessing previous downloads for up to 7 days.</p>
@@ -30,6 +30,9 @@ export default function FAQ() {
           
           <h3 style={{ fontSize: '1.1rem', marginTop: '20px', marginBottom: '10px', color: 'var(--ink)' }}>What file formats are supported?</h3>
           <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>We support PDF, JPG, PNG, WebP, and TIFF formats. You can convert between any of these formats, compress images, edit and optimize PDFs, convert images to PDF, and batch process multiple files together.</p>
+
+          <h3 style={{ fontSize: '1.1rem', marginTop: '20px', marginBottom: '10px', color: 'var(--ink)' }}>Can I edit PDFs? Can I merge or rearrange pages?</h3>
+          <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>Yes! The Edit PDF tool offers two modes: <strong>Merge</strong> (combine 2+ PDFs into one) and <strong>Rearrange & Rotate</strong> (edit a single PDF by reordering pages, rotating pages 90° at a time, and removing unwanted pages). Visual thumbnails make it easy to see and adjust pages before converting.</p>
 
           <h3 style={{ fontSize: '1.1rem', marginTop: '20px', marginBottom: '10px', color: 'var(--ink)' }}>How long does conversion typically take?</h3>
           <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>Most conversions complete in under 2 seconds. Small files usually finish in less than 1 second. Large files (50MB+) may take 5-15 seconds depending on size, format, and processing complexity.</p>
