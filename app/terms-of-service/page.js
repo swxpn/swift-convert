@@ -104,9 +104,9 @@ export default function TermsOfService() {
           Swift Convert may revise these terms at any time without notice. By using the website, you are agreeing to be bound by the then current version of these terms of service.
         </p>
 
-        <h2>16. Contact Information</h2>
+        <h2>16. Questions About These Terms?</h2>
         <p>
-          For any questions about these terms, please contact us at <code>legal@swift-convert.com</code>
+          For questions about these terms, please check our <a href="/faq" style={{ color: 'var(--primary)', textDecoration: 'none' }}>FAQ page</a>.
         </p>
 
         <div className="legal-note">

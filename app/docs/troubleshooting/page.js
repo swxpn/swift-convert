@@ -37,7 +37,6 @@ export default function Troubleshooting() {
         <li>Check file isn&apos;t corrupted (try opening it locally)</li>
         <li>Use lower quality settings</li>
         <li>Refresh page and retry</li>
-        <li>Contact support with error details</li>
       </ul>
 
       <h3>Quality is poor after conversion</h3>
@@ -79,7 +78,7 @@ export default function Troubleshooting() {
         <li>Check PDF isn&apos;t password protected</li>
         <li>Try opening PDF locally first</li>
         <li>Try uploading in different format</li>
-        <li>Contact support if continues</li>
+        <li>Wait a few seconds and refresh</li>
       </ul>
 
       <h3>PNG text becomes blurry</h3>
@@ -166,8 +165,8 @@ export default function Troubleshooting() {
 
       <h2>Getting More Help</h2>
       <div className="help-section">
-        <h3>📧 Email Support</h3>
-        <p>Contact us at <code>support@swift-convert.com</code> with:</p>
+        <h3>📧 Need More Help?</h3>
+        <p>Try the suggestions above or check our <a href="/faq" style={{ color: 'var(--primary)', textDecoration: 'none' }}>FAQ page</a> for more solutions.</p>
         <ul>
           <li>Description of the issue</li>
           <li>File type and size</li>

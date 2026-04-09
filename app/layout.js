@@ -128,7 +128,7 @@ export default function RootLayout({ children }) {
                   name: "Is there a file size limit?",
                   acceptedAnswer: {
                     "@type": "Answer",
-                    text: "Files up to 100MB are supported. For larger files, contact our support.",
+                    text: "Files up to 100MB are supported. See the FAQ for more information.",
                   },
                 },
               ],

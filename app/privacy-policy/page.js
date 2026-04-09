@@ -96,14 +96,10 @@ export default function PrivacyPolicy() {
           We may update this policy occasionally. We will notify you of significant changes via email or a prominent notice on our website.
         </p>
 
-        <h2>10. Contact Us</h2>
+        <h2>10. Questions?</h2>
         <p>
-          If you have questions about this privacy policy or our privacy practices, please contact us at:
+          If you have questions about this privacy policy or our privacy practices, please visit our <a href="/faq" style={{ color: 'var(--primary)', textDecoration: 'none' }}>FAQ page</a>.
         </p>
-        <ul>
-          <li>Email: <code>privacy@swift-convert.com</code></li>
-          <li>Mail: Swift Convert, Privacy Team</li>
-        </ul>
 
         <div className="legal-note">
           <strong>Note:</strong> This privacy policy is provided as-is. For any legal concerns, consult with a privacy attorney in your jurisdiction.

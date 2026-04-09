@@ -84,7 +84,7 @@ export default function FAQ() {
 
         <div style={{ background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: '8px', padding: '20px', marginTop: '40px' }}>
           <h3 style={{ marginTop: 0, color: 'var(--primary)' }}>Still have questions?</h3>
-          <p style={{ color: 'var(--muted)', margin: '10px 0 0 0' }}>Check our <a href="/docs/troubleshooting" style={{ color: 'var(--primary)', textDecoration: 'none' }}>troubleshooting guide</a> or contact our support team at support@swift-convert.com</p>
+          <p style={{ color: 'var(--muted)', margin: '10px 0 0 0' }}>Check our <a href="/docs/troubleshooting" style={{ color: 'var(--primary)', textDecoration: 'none' }}>troubleshooting guide</a> for more information.</p>
         </div>
       </article>
     </main>

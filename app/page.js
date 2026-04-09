@@ -54,7 +54,7 @@ const faqs = [
   {
     question: 'What are the file size and batch limits?',
     answer:
-      'Individual files: up to 100MB. Batch processing: up to 50 files with a total of 500MB. For enterprise clients needing higher limits, contact our support team.',
+      'Individual files: up to 100MB. Batch processing: up to 50 files with a total of 500MB.',
   },
   {
     question: 'Do I need an account to use Swift Convert?',
@@ -319,12 +319,10 @@ export default function HomePage() {
               <Link href="/donate">💝 Support Us</Link>
               <Link href="/privacy-policy">Privacy Policy</Link>
               <Link href="/terms-of-service">Terms of Service</Link>
-              <Link href="/contact">Contact</Link>
             </div>
             <div className="footer-section">
               <h4>Resources</h4>
               <Link href="/docs/getting-started">Getting Started</Link>
-              <Link href="/docs/api">API Documentation</Link>
               <Link href="/faq">FAQ</Link>
             </div>
           </div>
