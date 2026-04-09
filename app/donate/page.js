@@ -54,15 +54,24 @@ export default function Donate() {
           description: `Support Swift Convert - ₹${donationAmount}`,
           modal: {
             ondismiss: function() {
-              setIsProcessing(false);
+              try {
+                setIsProcessing(false);
+              } catch (e) {
+                console.error('Error dismissing modal:', e);
+              }
             }
           },
           handler: function (response) {
-            setError('');
-            setIsProcessing(false);
-            alert('Thank you for your donation! 🙏 Your support helps us improve server performance and add new features.');
-            setAmount(101);
-            setCustomAmount('');
+            try {
+              setError('');
+              setIsProcessing(false);
+              alert('Thank you for your donation! 🙏 Your support helps us improve server performance and add new features.');
+              setAmount(101);
+              setCustomAmount('');
+            } catch (e) {
+              console.error('Error processing donation success:', e);
+              setIsProcessing(false);
+            }
           },
           prefill: {
             name: '',
@@ -79,17 +88,28 @@ export default function Donate() {
 
         const rzp = new window.Razorpay(options);
         rzp.on('payment.failed', function (response) {
-          setIsProcessing(false);
-          setError(`Payment failed (${response.error.code}): ${response.error.description}`);
+          try {
+            setIsProcessing(false);
+            const errorMsg = response?.error?.description || 'Payment failed. Please try again.';
+            setError(`Payment failed: ${errorMsg}`);
+          } catch (e) {
+            console.error('Error handling payment failure:', e);
+            setIsProcessing(false);
+            setError('Payment failed. Please try again.');
+          }
         });
         rzp.open();
       } else {
         setError('Payment gateway not loaded. Please refresh and try again.');
       }
     } catch (err) {
-      setError(err.message || 'Failed to process donation');
-    } finally {
       setIsProcessing(false);
+      const errorMessage = err instanceof Error
+        ? err.message
+        : typeof err === 'string'
+          ? err
+          : 'Failed to process donation';
+      setError(errorMessage);
     }
   };
 
@@ -143,8 +163,12 @@ export default function Donate() {
                   key={btn.value}
                   className={`amount-btn ${amount === btn.value && !customAmount ? 'active' : ''}`}
                   onClick={() => {
-                    setAmount(btn.value);
-                    setCustomAmount('');
+                    try {
+                      setAmount(btn.value);
+                      setCustomAmount('');
+                    } catch (err) {
+                      console.error('Error selecting amount:', err);
+                    }
                   }}
                 >
                   {btn.label}
@@ -164,9 +188,13 @@ export default function Donate() {
               min="10"
               value={customAmount}
               onChange={(e) => {
-                setCustomAmount(e.target.value);
-                if (e.target.value) {
-                  setAmount(parseInt(e.target.value) || 101);
+                try {
+                  setCustomAmount(e.target.value);
+                  if (e.target.value) {
+                    setAmount(parseInt(e.target.value) || 101);
+                  }
+                } catch (err) {
+                  console.error('Error updating amount:', err);
                 }
               }}
               placeholder="Enter amount in INR"
@@ -183,7 +211,7 @@ export default function Donate() {
 
           {/* Error Message */}
           {error && (
-            <div style={{ background: '#ffe0e0', border: '1px solid #ff9999', borderRadius: '8px', padding: '12px', marginBottom: '20px', color: '#d32f2f', fontSize: '0.9rem' }}>
+            <div className="error-message">
               {error}
             </div>
           )}
@@ -192,29 +220,10 @@ export default function Donate() {
           <button
             onClick={() => handleDonate(finalAmount)}
             disabled={isProcessing || finalAmount < 10}
+            className={`donate-btn ${isProcessing || finalAmount < 10 ? 'disabled' : ''}`}
             style={{
               width: '100%',
               padding: '16px',
-              background: isProcessing || finalAmount < 10 ? '#ddd' : 'var(--primary)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '1.1rem',
-              fontWeight: '600',
-              cursor: isProcessing || finalAmount < 10 ? 'not-allowed' : 'pointer',
-              transition: 'all 0.3s ease',
-            }}
-            onMouseEnter={(e) => {
-              if (!isProcessing && finalAmount >= 10) {
-                e.target.style.background = 'var(--primary-dark)';
-                e.target.style.transform = 'translateY(-2px)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isProcessing && finalAmount >= 10) {
-                e.target.style.background = 'var(--primary)';
-                e.target.style.transform = 'translateY(0)';
-              }
             }}
           >
             {isProcessing ? '🔄 Processing...' : `💝 Donate ₹${finalAmount}`}

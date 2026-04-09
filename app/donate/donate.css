@@ -165,13 +165,13 @@
   transition: all 0.3s ease;
 }
 
-.donate-btn:hover:not(:disabled) {
+.donate-btn:hover:not(.disabled) {
   background: var(--primary-dark);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px var(--btn-shadow);
 }
 
-.donate-btn:disabled {
+.donate-btn.disabled {
   background: var(--muted);
   cursor: not-allowed;
   opacity: 0.5;
@@ -223,4 +223,183 @@
 
 .back-link a:hover {
   opacity: 0.8;
+}
+
+.donate-btn.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .donate-container {
+    padding: 40px 20px;
+  }
+
+  .donate-header {
+    margin-bottom: 40px;
+  }
+
+  .donate-header h1 {
+    font-size: 2rem;
+    margin-bottom: 15px;
+  }
+
+  .donate-header p {
+    font-size: 1rem;
+  }
+
+  .impact-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-bottom: 40px;
+  }
+
+  .donation-form {
+    padding: 25px;
+    margin-bottom: 30px;
+  }
+
+  .donation-form h2 {
+    font-size: 1.3rem;
+    margin-bottom: 20px;
+  }
+
+  .quick-amounts-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .amount-btn {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  .donate-btn {
+    padding: 14px;
+    font-size: 1rem;
+  }
+
+  .faq-item {
+    padding: 15px;
+  }
+
+  .faq-item h3 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+
+  .faq-item p {
+    font-size: 0.9rem;
+  }
+
+  .back-link {
+    margin-top: 30px;
+  }
+}
+
+@media (max-width: 480px) {
+  .donate-container {
+    padding: 30px 15px;
+  }
+
+  .donate-header {
+    margin-bottom: 30px;
+  }
+
+  .donate-header h1 {
+    font-size: 1.5rem;
+    margin-bottom: 12px;
+  }
+
+  .donate-header p {
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .impact-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 30px;
+  }
+
+  .impact-card {
+    padding: 15px;
+  }
+
+  .impact-card p {
+    font-size: 0.85rem;
+  }
+
+  .donation-form {
+    padding: 20px;
+    margin-bottom: 25px;
+  }
+
+  .donation-form h2 {
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+  }
+
+  .quick-amounts-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .amount-btn {
+    padding: 12px 10px;
+    font-size: 0.9rem;
+  }
+
+  .custom-amount-section label {
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+  }
+
+  .custom-amount-section input {
+    padding: 10px;
+    font-size: 0.95rem;
+  }
+
+  .error-message {
+    padding: 10px;
+    font-size: 0.85rem;
+    margin-bottom: 15px;
+  }
+
+  .donate-btn {
+    padding: 12px;
+    font-size: 0.95rem;
+  }
+
+  .payment-info {
+    font-size: 0.85rem;
+    margin-top: 12px;
+  }
+
+  .faq-section {
+    gap: 15px;
+  }
+
+  .faq-item {
+    padding: 12px;
+  }
+
+  .faq-item h3 {
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+  }
+
+  .faq-item p {
+    font-size: 0.85rem;
+    margin-top: 6px;
+  }
+
+  .back-link {
+    margin-top: 25px;
+  }
+
+  .back-link a {
+    font-size: 0.95rem;
+  }
 }
