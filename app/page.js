@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import Converter from './components/Converter';
+import CompactLiveStats from './components/CompactLiveStats';
 import { NavbarScrollHandler } from './components/NavbarScrollHandler';
 import './home.css';
 
@@ -128,20 +129,6 @@ export default function HomePage() {
                   Learn More
                 </Link>
               </div>
-              <div className="hero-stats">
-                <div className="stat">
-                  <strong>1M+</strong>
-                  <span>Files Converted</span>
-                </div>
-                <div className="stat">
-                  <strong>99.9%</strong>
-                  <span>Uptime</span>
-                </div>
-                <div className="stat">
-                  <strong>&lt;2s</strong>
-                  <span>Avg Conversion</span>
-                </div>
-              </div>
             </div>
             <div className="hero-visual">
               <div className="hero-buttons-grid">
@@ -165,6 +152,11 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* Compact Live Statistics */}
+        <div className="container">
+          <CompactLiveStats />
+        </div>
 
         {/* How It Works */}
         <section className="how-it-works">
