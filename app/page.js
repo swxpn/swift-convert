@@ -103,9 +103,9 @@ export default function HomePage() {
               <span className="logo-text">Swift Convert</span>
             </button>
               <nav className="nav-links">
-                <Link href="/docs/pdf-conversion">Guides</Link>
-                <Link href="/docs/formats">Formats</Link>
+                <Link href="/docs/getting-started">Documentations</Link>
                 <Link href="/blog">Blog</Link>
+                <Link href="/donate">💝 Support Us</Link>
               </nav>
             </div>
           </div>
