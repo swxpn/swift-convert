@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { runConversionWorker } from "../../../lib/pythonRunner";
 import { createSession } from "../../../lib/sessionStore";
 import { writeUploadedFile } from "../../../lib/uploadFile";
+import { sanitizeError, validateDpi, validateQuality, validatePageRange, getClientIp, checkRateLimit } from "../../../lib/securityUtils";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -14,7 +15,20 @@ export const maxDuration = 60;
 const MAX_FILE_SIZE = 30 * 1024 * 1024;
 
 export async function POST(request) {
+  let sessionDir = null;
+  
   try {
+    // Rate limiting
+    const ip = getClientIp(request);
+    const rateLimit = checkRateLimit(ip, 50); // Allow 50 conversions per minute per IP
+    
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     const form = await request.formData();
     const pdf = form.get("pdf");
     const format = String(form.get("format") || "PNG").toUpperCase();
@@ -34,7 +48,16 @@ export async function POST(request) {
       );
     }
 
-    const sessionDir = await fs.mkdtemp(path.join(os.tmpdir(), "pdf2img_"));
+    // Validate input parameters
+    try {
+      validateDpi(dpi);
+      validateQuality(webpQuality);
+      validatePageRange(pages);
+    } catch (validationErr) {
+      return NextResponse.json({ error: validationErr.message }, { status: 400 });
+    }
+
+    sessionDir = await fs.mkdtemp(path.join(os.tmpdir(), "pdf2img_"));
     const inputPath = path.join(sessionDir, "input.pdf");
     await writeUploadedFile(pdf, inputPath);
 
@@ -47,23 +70,27 @@ export async function POST(request) {
       webp_quality: webpQuality,
     });
 
-    const sessionId = createSession(sessionDir, {
+    const sid = encodeURIComponent(createSession(sessionDir, {
       images: result.image_names,
       zip: result.zip_name,
-    });
+    }));
 
-    const sid = encodeURIComponent(sessionId);
     return NextResponse.json({
-      session: sessionId,
+      session: sid,
       count: result.count,
       images: result.image_names.map((name) => `/api/file/${sid}/${encodeURIComponent(name)}`),
       zip: `/api/download/${sid}/${encodeURIComponent(result.zip_name)}`,
     });
   } catch (error) {
+    // Cleanup on error
+    if (sessionDir) {
+      await fs.rm(sessionDir, { recursive: true, force: true }).catch(() => {});
+    }
+    
     console.error(`[API/Convert] Error: ${error.message}`, error);
     const status = error.message.includes("Invalid") || error.message.includes("out of bounds") ? 400 : 500;
     return NextResponse.json(
-      { error: `Conversion failed: ${error.message}` },
+      { error: sanitizeError(error) },
       { status }
     );
   }

@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { runConversionWorker } from "../../../lib/pythonRunner";
 import { createSession } from "../../../lib/sessionStore";
 import { writeUploadedFile } from "../../../lib/uploadFile";
+import { sanitizeError, validateDpi, validateQuality, getClientIp, checkRateLimit } from "../../../lib/securityUtils";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -14,7 +15,20 @@ export const maxDuration = 60;
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
 export async function POST(request) {
+  let sessionDir = null;
+  
   try {
+    // Rate limiting
+    const ip = getClientIp(request);
+    const rateLimit = checkRateLimit(ip, 50);
+    
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     const form = await request.formData();
     const image = form.get("image");
     const targetFormat = String(form.get("target_format") || "JPEG").toUpperCase();
@@ -33,6 +47,14 @@ export async function POST(request) {
       );
     }
 
+    // Validate input parameters
+    try {
+      validateDpi(dpi);
+      validateQuality(webpQuality);
+    } catch (validationErr) {
+      return NextResponse.json({ error: validationErr.message }, { status: 400 });
+    }
+
     const normalizedTarget = targetFormat === "JPG" ? "JPEG" : targetFormat;
     if (!["PNG", "JPEG", "WEBP", "TIFF"].includes(normalizedTarget)) {
       return NextResponse.json(
@@ -49,7 +71,7 @@ export async function POST(request) {
       );
     }
 
-    const sessionDir = await fs.mkdtemp(path.join(os.tmpdir(), "imgconvert_"));
+    sessionDir = await fs.mkdtemp(path.join(os.tmpdir(), "imgconvert_"));
     const inputPath = path.join(sessionDir, `input${ext || ".img"}`);
     await writeUploadedFile(image, inputPath);
 
@@ -62,13 +84,12 @@ export async function POST(request) {
       webp_quality: webpQuality,
     });
 
-    const sessionId = createSession(sessionDir, {
+    const sid = encodeURIComponent(createSession(sessionDir, {
       image: result.image_name,
-    });
+    }));
 
-    const sid = encodeURIComponent(sessionId);
     return NextResponse.json({
-      session: sessionId,
+      session: sid,
       image: `/api/download/${sid}/${encodeURIComponent(result.image_name)}`,
       source_format: result.source_format,
       target_format: result.target_format,
@@ -76,10 +97,15 @@ export async function POST(request) {
       converted_bytes: result.converted_bytes,
     });
   } catch (error) {
+    // Cleanup on error
+    if (sessionDir) {
+      await fs.rm(sessionDir, { recursive: true, force: true }).catch(() => {});
+    }
+    
     console.error(`[API/ImgConvert] Error: ${error.message}`, error);
     const status = error.message.includes("Supported") || error.message.includes("different") ? 400 : 500;
     return NextResponse.json(
-      { error: `Image conversion failed: ${error.message}` },
+      { error: sanitizeError(error) },
       { status }
     );
   }

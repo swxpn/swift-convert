@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { runConversionWorker } from "../../../lib/pythonRunner";
 import { createSession } from "../../../lib/sessionStore";
 import { writeUploadedFile } from "../../../lib/uploadFile";
+import { sanitizeError, getClientIp, checkRateLimit } from "../../../lib/securityUtils";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -19,7 +20,20 @@ function isTruthy(value) {
 }
 
 export async function POST(request) {
+  let sessionDir = null;
+  
   try {
+    // Rate limiting
+    const ip = getClientIp(request);
+    const rateLimit = checkRateLimit(ip, 50); // Allow 50 compressions per minute per IP
+    
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     const form = await request.formData();
     const pdf = form.get("pdf");
     const targetPercent = Number(form.get("target_percent") || 30);
@@ -37,7 +51,7 @@ export async function POST(request) {
       );
     }
 
-    const sessionDir = await fs.mkdtemp(path.join(os.tmpdir(), "pdfcompress_"));
+    sessionDir = await fs.mkdtemp(path.join(os.tmpdir(), "pdfcompress_"));
     const inputPath = path.join(sessionDir, "input.pdf");
     await writeUploadedFile(pdf, inputPath);
 
@@ -49,13 +63,12 @@ export async function POST(request) {
       original_filename: pdf.name,
     });
 
-    const sessionId = createSession(sessionDir, {
+    const sid = encodeURIComponent(createSession(sessionDir, {
       pdf: result.pdf_name,
-    });
+    }));
 
-    const sid = encodeURIComponent(sessionId);
     return NextResponse.json({
-      session: sessionId,
+      session: sid,
       pdf: `/api/download/${sid}/${encodeURIComponent(result.pdf_name)}`,
       original_bytes: result.original_bytes,
       compressed_bytes: result.compressed_bytes,
@@ -67,10 +80,15 @@ export async function POST(request) {
       forced_used: result.forced_used,
     });
   } catch (error) {
+    // Cleanup on error
+    if (sessionDir) {
+      await fs.rm(sessionDir, { recursive: true, force: true }).catch(() => {});
+    }
+    
     console.error(`[API/CompressPDF] Error: ${error.message}`, error);
     const status = error.message.includes("Invalid") || error.message.includes("between") ? 400 : 500;
     return NextResponse.json(
-      { error: `Compression failed: ${error.message}` },
+      { error: sanitizeError(error) },
       { status }
     );
   }

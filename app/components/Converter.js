@@ -45,10 +45,15 @@ export default function Converter() {
 
   useEffect(() => {
     // Clear UI state when switching tabs
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFile(null);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFiles([]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setResult(null);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPdfPages([]);
   }, [activeTab]);
 

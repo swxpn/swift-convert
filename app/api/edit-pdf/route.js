@@ -6,12 +6,25 @@ import { NextResponse } from "next/server";
 import { runConversionWorker } from "../../../lib/pythonRunner";
 import { createSession } from "../../../lib/sessionStore";
 import { writeUploadedFile } from "../../../lib/uploadFile";
+import { sanitizeError, getClientIp, checkRateLimit } from "../../../lib/securityUtils";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(request) {
+  let sessionDir = null;
+  
   try {
+    // Rate limiting
+    const ip = getClientIp(request);
+    const rateLimit = checkRateLimit(ip, 30); // More strict for PDF editing
+    
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please try again later." },
+        { status: 429 }
+      );
+    }
     const form = await request.formData();
     const operation = String(form.get("operation") || "").trim().toLowerCase();
 
@@ -19,7 +32,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Invalid PDF edit operation." }, { status: 400 });
     }
 
-    const sessionDir = await fs.mkdtemp(path.join(os.tmpdir(), "pdfedit_"));
+    sessionDir = await fs.mkdtemp(path.join(os.tmpdir(), "pdfedit_"));
 
     if (operation === "merge") {
       const files = form.getAll("pdfs").filter((f) => typeof f !== "string");
@@ -44,11 +57,11 @@ export async function POST(request) {
         input_paths: inputPaths,
       });
 
-      const sessionId = createSession(sessionDir, { file: result.filename });
+      const sid = encodeURIComponent(createSession(sessionDir, { file: result.filename }));
       return NextResponse.json({
-        session: sessionId,
+        session: sid,
         operation,
-        file: `/api/download/${sessionId}/${result.filename}`,
+        file: `/api/download/${sid}/${encodeURIComponent(result.filename)}`,
         filename: result.filename,
         page_count: result.page_count,
         output_count: result.output_count,
@@ -86,10 +99,9 @@ export async function POST(request) {
       slots,
     });
 
-    const sessionId = createSession(sessionDir, { file: result.filename });
-    const sid = encodeURIComponent(sessionId);
+    const sid = encodeURIComponent(createSession(sessionDir, { file: result.filename }));
     return NextResponse.json({
-      session: sessionId,
+      session: sid,
       operation,
       file: `/api/download/${sid}/${encodeURIComponent(result.filename)}`,
       filename: result.filename,
@@ -98,8 +110,13 @@ export async function POST(request) {
       summary: result.summary,
     });
   } catch (error) {
+    // Cleanup on error
+    if (sessionDir) {
+      await fs.rm(sessionDir, { recursive: true, force: true }).catch(() => {});
+    }
+    
     console.error(`[API/EditPDF] Error: ${error.message}`, error);
     const status = error.message.includes("Invalid") || error.message.includes("out of bounds") || error.message.includes("requires") ? 400 : 500;
-    return NextResponse.json({ error: `PDF edit failed: ${error.message}` }, { status });
+    return NextResponse.json({ error: sanitizeError(error) }, { status });
   }
 }

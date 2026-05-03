@@ -5,57 +5,78 @@ import { NextResponse } from "next/server";
 
 import { getSession } from "../../../../../lib/sessionStore";
 import { contentTypeFor, safeFilename, encodeFilename } from "../../../../../lib/httpFile";
+import { verifyPathInBounds, getClientIp, checkRateLimit, sanitizeError } from "../../../../../lib/securityUtils";
 
 export const runtime = "nodejs";
 
-export async function GET(_request, { params }) {
-  const { sessionId, filename } = await params;
-  const name = safeFilename(filename);
-  if (!name) {
-    return new NextResponse("Invalid filename.", { status: 400 });
-  }
-
-  const meta = getSession(sessionId);
-  if (!meta) {
-    return new NextResponse("Session not found or expired.", { status: 404 });
-  }
-
-  const filePath = path.join(meta.dir, name);
-
+export async function GET(request, { params }) {
   try {
-    const stats = await fs.stat(filePath);
+    // Rate limiting
+    const ip = getClientIp(request);
+    const rateLimit = checkRateLimit(ip, 200); // Allow 200 downloads per minute per IP
     
-    if (!stats.isFile()) {
-      return new NextResponse("Path is not a file.", { status: 400 });
+    if (!rateLimit.allowed) {
+      return new NextResponse("Rate limit exceeded. Please try again later.", { status: 429 });
     }
-    
-    if (stats.size === 0) {
-      return new NextResponse("File is empty.", { status: 400 });
+
+    const { sessionId, filename } = await params;
+    const name = safeFilename(filename);
+    if (!name) {
+      return new NextResponse("Invalid filename.", { status: 400 });
     }
+
+    const meta = getSession(sessionId);
+    if (!meta) {
+      return new NextResponse("Session not found or expired.", { status: 404 });
+    }
+
+    const filePath = path.join(meta.dir, name);
     
-    const stream = Readable.toWeb(createReadStream(filePath));
+    // Verify path is within session directory (prevent path traversal)
+    try {
+      verifyPathInBounds(filePath, meta.dir);
+    } catch (err) {
+      return new NextResponse("Invalid request.", { status: 400 });
+    }
 
-    // RFC 5987 encoded filename for proper character support
-    const encodedName = encodeFilename(name);
-    const contentDisposition = encodedName.includes("'")
-      ? `attachment; filename*=${encodedName}; filename="${name.substring(0, 20)}"`
-      : `attachment; filename="${name}"`;
+    try {
+      const stats = await fs.stat(filePath);
+      
+      if (!stats.isFile()) {
+        return new NextResponse("Path is not a file.", { status: 400 });
+      }
+      
+      if (stats.size === 0) {
+        return new NextResponse("File is empty.", { status: 400 });
+      }
+      
+      const stream = Readable.toWeb(createReadStream(filePath));
 
-    return new NextResponse(stream, {
-      status: 200,
-      headers: {
-        "Content-Type": contentTypeFor(name),
-        "Content-Length": String(stats.size),
-        "Cache-Control": "no-store, no-cache, must-revalidate",
-        "Content-Disposition": contentDisposition,
-        "Accept-Ranges": "bytes",
-      },
-    });
+      // RFC 5987 encoded filename for proper character support
+      const encodedName = encodeFilename(name);
+      const contentDisposition = encodedName.includes("'")
+        ? `attachment; filename*=${encodedName}; filename="${name.substring(0, 20)}"`
+        : `attachment; filename="${name}"`;
+
+      return new NextResponse(stream, {
+        status: 200,
+        headers: {
+          "Content-Type": contentTypeFor(name),
+          "Content-Length": String(stats.size),
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+          "Content-Disposition": contentDisposition,
+          "Accept-Ranges": "bytes",
+        },
+      });
+    } catch (err) {
+      if (err.code === "ENOENT") {
+        return new NextResponse("File not found in session.", { status: 404 });
+      }
+      console.error(`[Download] Error accessing file:`, err.message);
+      return new NextResponse("Failed to retrieve file.", { status: 500 });
+    }
   } catch (err) {
-    if (err.code === "ENOENT") {
-      return new NextResponse("File not found in session.", { status: 404 });
-    }
-    console.error(`[Download] Error accessing ${filePath}:`, err.message);
-    return new NextResponse("Failed to retrieve file.", { status: 500 });
+    console.error(`[Download] Unexpected error:`, err.message);
+    return new NextResponse("Internal server error.", { status: 500 });
   }
 }

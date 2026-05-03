@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { sanitizeError, getClientIp, checkRateLimit } from "../../../../lib/securityUtils";
 
 export const runtime = "nodejs";
 
@@ -19,36 +20,47 @@ const RAZORPAY_DONATION_DESCRIPTION =
 export const maxDuration = 60;
 
 export async function POST(request) {
-  if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
-    return NextResponse.json(
-      { error: "Razorpay is not configured on this server." },
-      { status: 503 }
-    );
-  }
-
-  const payload = (await request.json().catch(() => ({}))) || {};
-  const rawAmount = payload.amount;
-  let amount = RAZORPAY_DONATION_AMOUNT_PAISA;
-
-  if (rawAmount !== undefined && rawAmount !== null) {
-    amount = Number(rawAmount);
-    if (!Number.isInteger(amount)) {
-      return NextResponse.json({ error: "Invalid amount." }, { status: 400 });
-    }
-  }
-
-  if (amount < 100) {
-    return NextResponse.json(
-      { error: "Minimum donation amount is 100 paise." },
-      { status: 400 }
-    );
-  }
-
-  const auth = Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString(
-    "base64"
-  );
-
   try {
+    // Rate limiting
+    const ip = getClientIp(request);
+    const rateLimit = checkRateLimit(ip, 100); // Allow 100 payment orders per minute per IP
+    
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please try again later." },
+        { status: 429 }
+      );
+    }
+
+    if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+      return NextResponse.json(
+        { error: "Razorpay is not configured on this server." },
+        { status: 503 }
+      );
+    }
+
+    const payload = (await request.json().catch(() => ({}))) || {};
+    const rawAmount = payload.amount;
+    let amount = RAZORPAY_DONATION_AMOUNT_PAISA;
+
+    if (rawAmount !== undefined && rawAmount !== null) {
+      amount = Number(rawAmount);
+      if (!Number.isInteger(amount)) {
+        return NextResponse.json({ error: "Invalid amount." }, { status: 400 });
+      }
+    }
+
+    if (amount < 100) {
+      return NextResponse.json(
+        { error: "Minimum donation amount is 100 paise." },
+        { status: 400 }
+      );
+    }
+
+    const auth = Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString(
+      "base64"
+    );
+
     const res = await fetch("https://api.razorpay.com/v1/orders", {
       method: "POST",
       headers: {
@@ -83,7 +95,7 @@ export async function POST(request) {
   } catch (error) {
     console.error(`[Razorpay] Exception: ${error.message}`, error);
     return NextResponse.json(
-      { error: `Unable to create payment order right now.` },
+      { error: sanitizeError(error) },
       { status: 500 }
     );
   }

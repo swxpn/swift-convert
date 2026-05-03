@@ -43,8 +43,10 @@ export default function Donate() {
 
       const data = await response.json();
       
-      // Initialize Razorpay checkout
+      // Initialize Razorpay checkout with modal
       if (typeof window !== 'undefined' && window.Razorpay) {
+        const isDark = document.documentElement.classList.contains('dark-mode');
+        
         const options = {
           key: data.key,
           order_id: data.order_id,
@@ -52,51 +54,43 @@ export default function Donate() {
           currency: data.currency,
           name: 'Swift Convert',
           description: `Support Swift Convert - ₹${donationAmount}`,
+          
           modal: {
             ondismiss: function() {
-              try {
-                setIsProcessing(false);
-              } catch (e) {
-                console.error('Error dismissing modal:', e);
-              }
+              setIsProcessing(false);
             }
           },
+          
           handler: function (response) {
-            try {
-              setError('');
-              setIsProcessing(false);
-              alert('Thank you for your donation! 🙏 Your support helps us improve server performance and add new features.');
-              setAmount(101);
-              setCustomAmount('');
-            } catch (e) {
-              console.error('Error processing donation success:', e);
-              setIsProcessing(false);
-            }
+            setError('');
+            setIsProcessing(false);
+            alert('Thank you for your donation! 🙏 Your support helps us improve server performance and add new features.');
+            setAmount(101);
+            setCustomAmount('');
           },
+          
           prefill: {
             name: '',
             email: '',
             contact: '',
           },
+          
           notes: {
             note_key_1: 'Swift Convert Donation',
           },
+          
           theme: {
             color: '#fc8019',
+            backcolor: isDark ? '#1d1917' : '#fff7f1',
+            labelcolor: isDark ? '#f4eee9' : '#1f1f24',
           },
         };
 
         const rzp = new window.Razorpay(options);
         rzp.on('payment.failed', function (response) {
-          try {
-            setIsProcessing(false);
-            const errorMsg = response?.error?.description || 'Payment failed. Please try again.';
-            setError(`Payment failed: ${errorMsg}`);
-          } catch (e) {
-            console.error('Error handling payment failure:', e);
-            setIsProcessing(false);
-            setError('Payment failed. Please try again.');
-          }
+          setIsProcessing(false);
+          const errorMsg = response?.error?.description || 'Payment failed. Please try again.';
+          setError(`Payment failed: ${errorMsg}`);
         });
         rzp.open();
       } else {

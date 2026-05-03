@@ -5,44 +5,67 @@ import { NextResponse } from "next/server";
 
 import { getSession } from "../../../../../lib/sessionStore";
 import { contentTypeFor, safeFilename, encodeFilename } from "../../../../../lib/httpFile";
+import { verifyPathInBounds, getClientIp, checkRateLimit } from "../../../../../lib/securityUtils";
 
 export const runtime = "nodejs";
 
-export async function GET(_request, { params }) {
-  const { sessionId, filename } = await params;
-  const name = safeFilename(filename);
-  if (!name) {
-    return new NextResponse("File not found.", { status: 404 });
-  }
-
-  const meta = getSession(sessionId);
-  if (!meta) {
-    return new NextResponse("Session not found or expired.", { status: 404 });
-  }
-
+export async function GET(request, { params }) {
   try {
-    const stats = await fs.stat(filePath);
-    const stream = Readable.toWeb(createReadStream(filePath));
-    const type = contentTypeFor(name);
-    const asAttachment = name.endsWith(".zip") || name.endsWith(".pdf");
-
-    const encodedName = encodeFilename(name);
-    const contentDisposition = encodedName.includes("'")
-      ? `attachment; filename*=${encodedName}; filename="${name.substring(0, 20)}"`
-      : `attachment; filename="${name}"`;
-
-    const headers = {
-      "Content-Type": type,
-      "Content-Length": String(stats.size),
-      "Cache-Control": "no-store, no-cache, must-revalidate",
-      "Accept-Ranges": "bytes",
-    };
-    if (asAttachment) {
-      headers["Content-Disposition"] = contentDisposition;
+    // Rate limiting
+    const ip = getClientIp(request);
+    const rateLimit = checkRateLimit(ip, 200);
+    
+    if (!rateLimit.allowed) {
+      return new NextResponse("Rate limit exceeded.", { status: 429 });
     }
 
-    return new NextResponse(stream, { status: 200, headers });
-  } catch {
-    return new NextResponse("File not found.", { status: 404 });
+    const { sessionId, filename } = await params;
+    const name = safeFilename(filename);
+    if (!name) {
+      return new NextResponse("File not found.", { status: 404 });
+    }
+
+    const meta = getSession(sessionId);
+    if (!meta) {
+      return new NextResponse("Session not found or expired.", { status: 404 });
+    }
+
+    const filePath = path.join(meta.dir, name);
+    
+    // Verify path is within session directory
+    try {
+      verifyPathInBounds(filePath, meta.dir);
+    } catch (err) {
+      return new NextResponse("File not found.", { status: 404 });
+    }
+
+    try {
+      const stats = await fs.stat(filePath);
+      const stream = Readable.toWeb(createReadStream(filePath));
+      const type = contentTypeFor(name);
+      const asAttachment = name.endsWith(".zip") || name.endsWith(".pdf");
+
+      const encodedName = encodeFilename(name);
+      const contentDisposition = encodedName.includes("'")
+        ? `attachment; filename*=${encodedName}; filename="${name.substring(0, 20)}"`
+        : `attachment; filename="${name}"`;
+
+      const headers = {
+        "Content-Type": type,
+        "Content-Length": String(stats.size),
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Accept-Ranges": "bytes",
+      };
+      if (asAttachment) {
+        headers["Content-Disposition"] = contentDisposition;
+      }
+
+      return new NextResponse(stream, { status: 200, headers });
+    } catch {
+      return new NextResponse("File not found.", { status: 404 });
+    }
+  } catch (error) {
+    console.error(`[File API] Error: ${error.message}`);
+    return new NextResponse("Internal server error.", { status: 500 });
   }
 }
