@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import '../styles/converter.css';
 
 const TOOLS = [
@@ -43,19 +44,19 @@ export default function Converter() {
   const dropZoneRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  const clearAllState = useCallback(() => {
+    setFile(null);
+    setFiles([]);
+    setResult(null);
+    setError(null);
+    setPdfPages([]);
+  }, []);
+
   useEffect(() => {
     // Clear UI state when switching tabs
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setFile(null);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setFiles([]);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setResult(null);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setError(null);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPdfPages([]);
-  }, [activeTab]);
+    clearAllState();
+  }, [activeTab, clearAllState]);
 
   const validateFile = (file) => {
     const config = FILE_LIMITS[activeTab];
@@ -637,10 +638,12 @@ export default function Converter() {
                         >
                           <div className="thumbnail-preview">
                             {page.image && (
-                              <img
+                              <Image
                                 src={page.image}
                                 alt={`Page ${page.index + 1}`}
                                 className="page-image"
+                                fill
+                                style={{ objectFit: 'contain' }}
                               />
                             )}
                             <span
